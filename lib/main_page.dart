@@ -12,29 +12,36 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  int _selectedIndex = 0; // Melacak tab mana yang sedang aktif
+  int _selectedIndex = 0;
+  late List<Widget> _pages; // Kita ubah dari 'static const'
 
-  // Daftar halaman/widget yang akan ditampilkan
-  static const List<Widget> _pages = <Widget>[
-    BerandaPage(),
-    UmkmPage(),
-    NotifikasiPage(),
-    AkunPage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Kita inisialisasi _pages di sini agar bisa mengirim fungsi
+    _pages = <Widget>[
+      BerandaPage(onTabJump: _jumpToTab), // Kirim fungsi ke Beranda
+      UmkmPage(),
+      NotifikasiPage(),
+      AkunPage(),
+    ];
+  }
+
+  // Fungsi untuk pindah tab, dipanggil dari BerandaPage
+  void _jumpToTab(int index) {
+    _onItemTapped(index);
+  }
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index; // Update state saat tab diklik
+      _selectedIndex = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Body akan berubah sesuai tab yang dipilih
-      body: _pages[_selectedIndex], 
-      
-      // Navigasi Bawah
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -42,23 +49,24 @@ class _MainPageState extends State<MainPage> {
             label: 'Beranda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.store),
+            icon: Icon(Icons.storefront_outlined),
             label: 'UMKM',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
+            icon: Icon(Icons.notifications_outlined),
             label: 'Notifikasi',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline),
             label: 'Akun',
           ),
         ],
-        currentIndex: _selectedIndex, // Tandai tab yang aktif
-        selectedItemColor: Colors.blue[800], // Warna tab aktif
-        unselectedItemColor: Colors.grey, // Warna tab tidak aktif
-        onTap: _onItemTapped, // Panggil fungsi saat diklik
-        type: BottomNavigationBarType.fixed, // Pastikan 4 labelnya muncul
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue.shade800,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: true,
       ),
     );
   }

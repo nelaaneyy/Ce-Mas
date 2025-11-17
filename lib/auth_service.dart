@@ -18,6 +18,7 @@ class AuthService {
     String password,
     String namaPertama,
     String namaTerakhir,
+    String username,
     String nomorHp,
   ) async {
     try {
@@ -35,6 +36,7 @@ class AuthService {
         'namaPertama': namaPertama,
         'namaTerakhir': namaTerakhir,
         'nomorHp': nomorHp,
+        'username': username,
         'role': 'pembeli', // Default role adalah pembeli
         'createdAt': Timestamp.now(),
       });
@@ -48,6 +50,17 @@ class AuthService {
       print(e);
       return null;
     }
+  }
+
+  // --- FUNGSI BARU UNTUK AMBIL DATA USER ---
+  Future<DocumentSnapshot?> getCurrentUserData() async {
+    // Dapatkan user yang sedang login dari Firebase Auth
+    User? user = _auth.currentUser;
+    if (user != null) {
+      // Ambil dokumen user dari Firestore berdasarkan UID-nya
+      return await _firestore.collection('users').doc(user.uid).get();
+    }
+    return null;
   }
 
   // --- FUNGSI SIGN IN (LOGIN) ---

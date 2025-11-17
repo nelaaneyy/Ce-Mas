@@ -14,6 +14,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final AuthService _authService = AuthService();
   final _namaPertamaController = TextEditingController();
   final _namaTerakhirController = TextEditingController();
+  final _usernameController = TextEditingController(); // Field baru
   final _emailController = TextEditingController();
   final _nomorHpController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -21,78 +22,76 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isLoading = false;
 
   void _register() async {
+    // Cek apakah password cocok
     if (_passwordController.text != _konfirmasiPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password tidak cocok!'))
-      );
+          const SnackBar(content: Text('Password tidak cocok!')));
       return;
     }
 
     setState(() { _isLoading = true; });
 
     try {
+      // Panggil service dengan field 'username' yang baru
       await _authService.signUpWithEmailPassword(
-        _emailController.text,
-        _passwordController.text,
-        _namaPertamaController.text,
-        _namaTerakhirController.text,
-        _nomorHpController.text,
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _namaPertamaController.text.trim(),
+        _namaTerakhirController.text.trim(),
+        _usernameController.text.trim(), // Kirim username
+        _nomorHpController.text.trim(),
       );
       // Jika berhasil, AuthWrapper akan otomatis pindah halaman
     } catch (e) {
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Daftar Gagal: ${e.toString()}'))
-      );
-    }
-    
-    if (mounted) {
-      setState(() { _isLoading = false; });
+          SnackBar(content: Text('Daftar Gagal: ${e.toString()}')));
     }
   }
 
-
+  // --- UI WIDGET UTAMA ---
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blue.shade800,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Bagian Logo
-              const SizedBox(height: 50),
-              // Ganti dengan logo-mu
-              const Icon(Icons.store, color: Colors.white, size: 100), 
-              const SizedBox(height: 30),
+    final screenSize = MediaQuery.of(context).size;
 
-              // Bagian Form Putih
-              Container(
-                padding: const EdgeInsets.all(24.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
-                  ),
+    return Scaffold(
+      backgroundColor: Colors.blue.shade800, // Latar biru
+      body: Stack(
+        children: [
+          // WADAH KONTEN PUTIH (FORM)
+          Positioned(
+            top: screenSize.height * 0.25, // Mulai 25% dari atas
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
                 ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 60, 24, 24), // 60px padding atas
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 20),
+                    // --- Judul dan Link Login ---
                     const Text(
                       'Sign up',
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
-
-                    // Link ke Login
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Already have an account? "),
                         GestureDetector(
-                          onTap: widget.onSwitchToLogin, // Panggil fungsi pindah
+                          onTap: widget.onSwitchToLogin, // Pindah ke Login
                           child: Text(
                             'Login',
                             style: TextStyle(
@@ -103,80 +102,64 @@ class _SignUpPageState extends State<SignUpPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 30),
 
-                    // Form Nama
+                    // --- Form Input ---
+                    // Baris Nama Pertama & Terakhir
                     Row(
                       children: [
                         Expanded(
-                          child: TextFormField(
+                          child: _buildCustomTextField(
+                            label: 'Nama Pertama',
                             controller: _namaPertamaController,
-                            decoration: InputDecoration(
-                              labelText: 'Nama Pertama',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 16),
                         Expanded(
-                          child: TextFormField(
+                          child: _buildCustomTextField(
+                            label: 'Nama Terakhir',
                             controller: _namaTerakhirController,
-                            decoration: InputDecoration(
-                              labelText: 'Nama Terakhir',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // (Kita skip Username sesuai desain)
-                    
-                    // Form Email
-                    TextFormField(
+
+                    _buildCustomTextField(
+                      label: 'Username',
+                      controller: _usernameController,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildCustomTextField(
+                      label: 'Email',
                       controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
+                      isEmail: true,
                     ),
                     const SizedBox(height: 20),
-
-                    // Form Nomor HP
-                    TextFormField(
+                    
+                    _buildCustomTextField(
+                      label: 'Nomor HP',
                       controller: _nomorHpController,
-                      decoration: InputDecoration(
-                        labelText: 'Nomor HP',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      keyboardType: TextInputType.phone,
+                      isPhone: true,
                     ),
                     const SizedBox(height: 20),
 
-                    // Form Password
-                    TextFormField(
+                    _buildCustomTextField(
+                      label: 'Password',
                       controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                      isPassword: true,
                     ),
                     const SizedBox(height: 20),
 
-                    // Form Konfirmasi Password
-                    TextFormField(
+                    _buildCustomTextField(
+                      label: 'Konfirmasi Password',
                       controller: _konfirmasiPasswordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Konfirmasi Password',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                      isPassword: true,
                     ),
                     const SizedBox(height: 30),
 
-                    // Tombol Register
+                    // --- Tombol Register ---
                     ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
@@ -195,10 +178,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Link Daftar UMKM
+                    // --- Link Daftar UMKM ---
                     GestureDetector(
                       onTap: () {
-                        // Nanti ini akan ke halaman daftar UMKM
+                        // TODO: Buat alur pendaftaran UMKM
                         print('Pindah ke halaman daftar UMKM');
                       },
                       child: Text(
@@ -213,10 +196,69 @@ class _SignUpPageState extends State<SignUpPage> {
                   ],
                 ),
               ),
-            ],
+            ),
+          ),
+
+          // --- LOGO (DI ATAS SEMUANYA) ---
+          Positioned(
+            top: (screenSize.height * 0.125) - 50, 
+            left: (screenSize.width / 2) - 50,
+            
+            child: Container(
+              width: 100,
+              height: 100,
+              child: Image.asset(
+                'assets/images/logocemas.jpeg', 
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET HELPER (Sama seperti di login_page) ---
+  Widget _buildCustomTextField({
+    required String label,
+    required TextEditingController controller,
+    bool isPassword = false,
+    bool isEmail = false,
+    bool isPhone = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black54,
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword,
+          keyboardType: isEmail
+              ? TextInputType.emailAddress
+              : (isPhone ? TextInputType.phone : TextInputType.text),
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.grey),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.blue.shade800),
+            ),
+            suffixIcon: isPassword
+                ? const Icon(Icons.visibility_off_outlined)
+                : null,
+          ),
+        ),
+      ],
     );
   }
 }
