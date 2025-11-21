@@ -7,13 +7,18 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Mendapatkan User ID yang sedang login
+  // --- MENDAPATKAN USER ID SAAT INI ---
   String? getCurrentUserId() {
     return _auth.currentUser?.uid;
   }
 
+  // --- STREAM STATUS AUTH ---
+  // Berguna untuk mengecek apakah user sedang login atau tidak secara realtime
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
   // --- FUNGSI SIGN UP (DAFTAR) ---
-  Future<UserCredential?> signUpWithEmailPassword(
+  // Catatan: Tidak ada try-catch di sini agar error diteruskan ke UI
+  Future<UserCredential> signUpWithEmailPassword(
     String email,
     String password,
     String namaPertama,
@@ -21,15 +26,15 @@ class AuthService {
     String username,
     String nomorHp,
   ) async {
-    try {
-      // 1. Buat user di Firebase Auth
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+    // 1. Buat user di Firebase Auth
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-      // 2. Simpan data tambahan ke Firestore
-      // Kita gunakan UID dari Auth sebagai ID dokumen di Firestore
+    // 2. Simpan data tambahan ke Firestore
+    // Menggunakan UID dari Auth sebagai ID dokumen
+    if (userCredential.user != null) {
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'email': email,
@@ -37,44 +42,22 @@ class AuthService {
         'namaTerakhir': namaTerakhir,
         'nomorHp': nomorHp,
         'username': username,
-        'role': 'pembeli', // Default role adalah pembeli
+        'role': 'pembeli', // Default role
         'createdAt': Timestamp.now(),
       });
-
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      // Menampilkan pesan error yang lebih rapi
-      print('Error: ${e.message}');
-      return null;
-    } catch (e) {
-      print(e);
-      return null;
     }
-  }
 
-  // --- FUNGSI BARU UNTUK AMBIL DATA USER ---
-  Future<DocumentSnapshot?> getCurrentUserData() async {
-    // Dapatkan user yang sedang login dari Firebase Auth
-    User? user = _auth.currentUser;
-    if (user != null) {
-      // Ambil dokumen user dari Firestore berdasarkan UID-nya
-      return await _firestore.collection('users').doc(user.uid).get();
-    }
-    return null;
+    return userCredential;
   }
 
   // --- FUNGSI SIGN IN (LOGIN) ---
-  Future<UserCredential?> signInWithEmailPassword(String email, String password) async {
-    try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
-      print('Error: ${e.message}');
-      return null;
-    }
+  // Catatan: Tidak ada try-catch di sini agar error (password salah, user not found) diteruskan ke UI
+  Future<UserCredential> signInWithEmailPassword(String email, String password) async {
+    UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return userCredential;
   }
 
   // --- FUNGSI SIGN OUT (LOGOUT) ---
@@ -82,7 +65,12 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // --- STREAM STATUS AUTH ---
-  // (Ini untuk "AuthWrapper" yang akan kita bahas nanti)
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // --- FUNGSI AMBIL DATA USER DARI FIRESTORE ---
+  Future<DocumentSnapshot?> getCurrentUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      return await _firestore.collection('users').doc(user.uid).get();
+    }
+    return null;
+  }
 }

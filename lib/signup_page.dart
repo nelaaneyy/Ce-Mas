@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'auth_service.dart'; // Import service kita
+import 'auth_service.dart';
 
 class SignUpPage extends StatefulWidget {
-  final VoidCallback? onSwitchToLogin; // Untuk pindah ke halaman Login
+  final VoidCallback? onSwitchToLogin;
 
   const SignUpPage({super.key, this.onSwitchToLogin});
 
@@ -12,61 +12,91 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final AuthService _authService = AuthService();
+
   final _namaPertamaController = TextEditingController();
   final _namaTerakhirController = TextEditingController();
-  final _usernameController = TextEditingController(); // Field baru
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _nomorHpController = TextEditingController();
   final _passwordController = TextEditingController();
   final _konfirmasiPasswordController = TextEditingController();
+
   bool _isLoading = false;
 
+  // REGISTER
   void _register() async {
-    // Cek apakah password cocok
+    // 1. Validasi Password
     if (_passwordController.text != _konfirmasiPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password tidak cocok!')));
+        const SnackBar(content: Text('Password tidak cocok!')),
+      );
       return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() => _isLoading = true);
 
     try {
-      // Panggil service dengan field 'username' yang baru
+      // 2. Proses Register ke Backend/Firebase
       await _authService.signUpWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _namaPertamaController.text.trim(),
         _namaTerakhirController.text.trim(),
-        _usernameController.text.trim(), // Kirim username
+        _usernameController.text.trim(),
         _nomorHpController.text.trim(),
       );
-      // Jika berhasil, AuthWrapper akan otomatis pindah halaman
-    } catch (e) {
-      if (mounted) {
-        setState(() { _isLoading = false; });
+
+      // ==================================================================
+      // PERBAIKAN: Logout paksa agar sesi tidak berlanjut (Auto Login mati)
+      // ==================================================================
+      await _authService.signOut(); 
+      
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // 3. Pindah UI kembali ke LOGIN
+      if (widget.onSwitchToLogin != null) {
+        widget.onSwitchToLogin!();
       }
+
+      // 4. Tampilkan Pesan Sukses
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Daftar Gagal: ${e.toString()}')));
+        const SnackBar(
+          content: Text('Akun berhasil dibuat. Silakan login kembali.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Daftar gagal: $e')),
+      );
     }
   }
 
-  // --- UI WIDGET UTAMA ---
+  // UI HALAMAN
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.blue.shade800, // Latar biru
+      backgroundColor: Colors.blue.shade800,
       body: Stack(
         children: [
-          // WADAH KONTEN PUTIH (FORM)
+          /// ============================
+          /// FORM PUTIH
+          /// ============================
           Positioned(
-            top: screenSize.height * 0.25, // Mulai 25% dari atas
+            top: size.height * 0.25,
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
@@ -75,23 +105,25 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 24), // 60px padding atas
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- Judul dan Link Login ---
                     const Text(
-                      'Sign up',
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Already have an account? "),
                         GestureDetector(
-                          onTap: widget.onSwitchToLogin, // Pindah ke Login
+                          onTap: widget.onSwitchToLogin,
                           child: Text(
                             'Login',
                             style: TextStyle(
@@ -104,20 +136,19 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // --- Form Input ---
-                    // Baris Nama Pertama & Terakhir
+                    /// Nama Depan & Belakang
                     Row(
                       children: [
                         Expanded(
-                          child: _buildCustomTextField(
-                            label: 'Nama Pertama',
+                          child: _buildField(
+                            label: "Nama Pertama",
                             controller: _namaPertamaController,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildCustomTextField(
-                            label: 'Nama Terakhir',
+                          child: _buildField(
+                            label: "Nama Terakhir",
                             controller: _namaTerakhirController,
                           ),
                         ),
@@ -125,41 +156,39 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    _buildCustomTextField(
-                      label: 'Username',
-                      controller: _usernameController,
-                    ),
+                    _buildField(
+                        label: 'Username', controller: _usernameController),
                     const SizedBox(height: 20),
 
-                    _buildCustomTextField(
+                    _buildField(
                       label: 'Email',
                       controller: _emailController,
                       isEmail: true,
                     ),
                     const SizedBox(height: 20),
-                    
-                    _buildCustomTextField(
+
+                    _buildField(
                       label: 'Nomor HP',
                       controller: _nomorHpController,
                       isPhone: true,
                     ),
                     const SizedBox(height: 20),
 
-                    _buildCustomTextField(
+                    _buildField(
                       label: 'Password',
                       controller: _passwordController,
                       isPassword: true,
                     ),
                     const SizedBox(height: 20),
 
-                    _buildCustomTextField(
+                    _buildField(
                       label: 'Konfirmasi Password',
                       controller: _konfirmasiPasswordController,
                       isPassword: true,
                     ),
                     const SizedBox(height: 30),
 
-                    // --- Tombol Register ---
+                    /// TOMBOL REGISTER
                     ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
@@ -172,20 +201,18 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
-                              'Register',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              "Register",
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 18),
                             ),
                     ),
+
                     const SizedBox(height: 20),
 
-                    // --- Link Daftar UMKM ---
                     GestureDetector(
-                      onTap: () {
-                        // TODO: Buat alur pendaftaran UMKM
-                        print('Pindah ke halaman daftar UMKM');
-                      },
+                      onTap: () {},
                       child: Text(
-                        'Daftar sebagai UMKM? Sign In',
+                        "Daftar sebagai UMKM? Sign In",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.blue.shade800,
@@ -199,18 +226,16 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ),
 
-          // --- LOGO (DI ATAS SEMUANYA) ---
+          /// ============================
+          /// LOGO DI ATAS
+          /// ============================
           Positioned(
-            top: (screenSize.height * 0.125) - 50, 
-            left: (screenSize.width / 2) - 50,
-            
-            child: Container(
+            top: (size.height * 0.125) - 50,
+            left: (size.width / 2) - 50,
+            child: SizedBox(
               width: 100,
               height: 100,
-              child: Image.asset(
-                'assets/images/logocemas.jpeg', 
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset("assets/images/logocemas.jpeg"),
             ),
           ),
         ],
@@ -218,8 +243,8 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // --- WIDGET HELPER (Sama seperti di login_page) ---
-  Widget _buildCustomTextField({
+  /// FIELD REUSABLE
+  Widget _buildField({
     required String label,
     required TextEditingController controller,
     bool isPassword = false,
@@ -229,14 +254,12 @@ class _SignUpPageState extends State<SignUpPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.black54,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black54,
+            )),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -247,7 +270,6 @@ class _SignUpPageState extends State<SignUpPage> {
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Colors.grey),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),

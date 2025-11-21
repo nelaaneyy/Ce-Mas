@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'detail_notifikasi_page.dart';
 
 class NotifikasiPage extends StatelessWidget {
   const NotifikasiPage({super.key});
@@ -9,21 +10,25 @@ class NotifikasiPage extends StatelessWidget {
       {
         "waktu": "11:00, 12 Nov 2025",
         "pesan": "Beri ulasan terhadap UMKM!",
+        "umkm": "Bakso Pak Budi",
         "dibaca": false,
       },
       {
         "waktu": "09:05, 14 Nov 2025",
         "pesan": "UMKM baru tersedia!",
+        "umkm": "Sate Enak Barokah",
         "dibaca": false,
       },
       {
         "waktu": "20:14, 13 Nov 2025",
         "pesan": "Pembaruan tersedia!",
+        "umkm": "Warung Mamah",
         "dibaca": true,
       },
       {
         "waktu": "11:00, 12 Nov 2025",
         "pesan": "Anda berhasil login",
+        "umkm": "",
         "dibaca": true,
       },
     ];
@@ -86,7 +91,17 @@ class NotifikasiPage extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: Aksi ketika notifikasi dibuka
+                      // ➤ Navigasi ke halaman detail notifikasi
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailNotifikasiPage(
+                            waktu: item["waktu"],
+                            pesan: item["pesan"],
+                            umkmNama: item["umkm"],
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade800,
