@@ -12,6 +12,12 @@ class AuthService {
     return _auth.currentUser?.uid;
   }
 
+  // Tambahkan fungsi ini agar dipanggil di UI
+  User? getCurrentUser() {
+    // <-- Mengembalikan objek User
+    return _auth.currentUser;
+  }
+
   // --- STREAM STATUS AUTH ---
   // Berguna untuk mengecek apakah user sedang login atau tidak secara realtime
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -52,7 +58,10 @@ class AuthService {
 
   // --- FUNGSI SIGN IN (LOGIN) ---
   // Catatan: Tidak ada try-catch di sini agar error (password salah, user not found) diteruskan ke UI
-  Future<UserCredential> signInWithEmailPassword(String email, String password) async {
+  Future<UserCredential> signInWithEmailPassword(
+    String email,
+    String password,
+  ) async {
     UserCredential userCredential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,

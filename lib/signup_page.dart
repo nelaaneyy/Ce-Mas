@@ -27,9 +27,9 @@ class _SignUpPageState extends State<SignUpPage> {
   void _register() async {
     // 1. Validasi Password
     if (_passwordController.text != _konfirmasiPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password tidak cocok!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password tidak cocok!')));
       return;
     }
 
@@ -37,6 +37,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       // 2. Proses Register ke Backend/Firebase
+      // Penyimpanan data ke Firestore sudah ditangani oleh AuthService
       await _authService.signUpWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
@@ -46,11 +47,15 @@ class _SignUpPageState extends State<SignUpPage> {
         _nomorHpController.text.trim(),
       );
 
-      // ==================================================================
-      // PERBAIKAN: Logout paksa agar sesi tidak berlanjut (Auto Login mati)
-      // ==================================================================
-      await _authService.signOut(); 
-      
+      // **********************************************
+      // PERHATIAN: Tidak perlu kode Firestore di sini!
+      // Tidak perlu memanggil getCurrentUser() lagi!
+      // **********************************************
+
+      // HAPUS LOGOUT PAKSA: Dengan AuthWrapper, user akan langsung
+      // diarahkan ke MainPage karena sudah otomatis login.
+      // await _authService.signOut(); // <--- HAPUS BARIS INI!
+
       if (!mounted) return;
 
       setState(() => _isLoading = false);
@@ -63,7 +68,7 @@ class _SignUpPageState extends State<SignUpPage> {
       // 4. Tampilkan Pesan Sukses
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Akun berhasil dibuat. Silakan login kembali.'),
+          content: Text('Akun berhasil dibuat. Silakan login.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -72,9 +77,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Daftar gagal: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Daftar gagal: $e')));
     }
   }
 
@@ -157,7 +162,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     const SizedBox(height: 20),
 
                     _buildField(
-                        label: 'Username', controller: _usernameController),
+                      label: 'Username',
+                      controller: _usernameController,
+                    ),
                     const SizedBox(height: 20),
 
                     _buildField(
@@ -202,8 +209,10 @@ class _SignUpPageState extends State<SignUpPage> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               "Register",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
                             ),
                     ),
 
@@ -254,12 +263,14 @@ class _SignUpPageState extends State<SignUpPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
-            )),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black54,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -268,9 +279,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ? TextInputType.emailAddress
               : (isPhone ? TextInputType.phone : TextInputType.text),
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: Colors.blue.shade800),
