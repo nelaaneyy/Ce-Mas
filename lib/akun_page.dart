@@ -1,27 +1,119 @@
+import 'package:cemas/umkm_features/daftar_umkm_main.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'auth_service.dart';
+import 'seller_service.dart';
 
 class AkunPage extends StatelessWidget {
   const AkunPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final AuthService authService = AuthService();
+    final SellerService sellerService = SellerService();
+
     return Scaffold(
+      backgroundColor: Colors.grey[50], 
       appBar: AppBar(
         backgroundColor: Colors.blue.shade800,
-        title: const Text('Akun'),
+        title: const Text('Akun', style: TextStyle(color: Colors.white)),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: true,
       ),
 
-      body: Padding(
+      body: SingleChildScrollView( 
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ---- CARD PROFILE ----
+            // ---- HEADER PROFILE ----
+            FutureBuilder<DocumentSnapshot?>(
+              future: authService.getCurrentUserData(),
+              builder: (context, snapshot) {
+                String nama = "Memuat...";
+                String email = "";
+                
+                if (snapshot.hasData && snapshot.data != null) {
+                  var data = snapshot.data!;
+                  nama = "${data['namaPertama']} ${data['namaTerakhir']}";
+                  email = data['email'];
+                }
+
+                return Column(
+                  children: [
+                    const CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.blue,
+                      child: Icon(Icons.person, size: 50, color: Colors.white),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      nama,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      email,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                );
+              },
+            ),
+
+            const SizedBox(height: 30),
+
+            // ---- LOGIC TOMBOL TOKO ----
+            StreamBuilder<DocumentSnapshot?>(
+              stream: sellerService.getMyStoreStream(),
+              builder: (context, snapshot) {
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                bool hasStore = false;
+                if (snapshot.hasData && snapshot.data != null) {
+                  hasStore = snapshot.data!.exists;
+                }
+
+                if (hasStore) {
+                  // JIKA SUDAH PUNYA TOKO
+                  return _menuTile(
+                    icon: Icons.store,
+                    title: "Kelola Toko Saya",
+                    iconColor: Colors.blue.shade800,
+                    onTap: () {
+                      // TODO: Arahkan ke Dashboard Toko
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Masuk ke Dashboard Toko...")),
+                      );
+                    },
+                  );
+                } else {
+                  // JIKA BELUM PUNYA TOKO
+                  return _menuTile(
+                    icon: Icons.add_business,
+                    title: "Daftar Gratis sebagai UMKM",
+                    iconColor: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DaftarUmkmMainPage()),
+                      );
+                    },
+                  );
+                }
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // ---- CARD PROFILE / EDIT ----
             _menuTile(
               icon: Icons.person_outline,
-              title: "Profile",
+              title: "Edit Profil",
               onTap: () {
-                Navigator.pushNamed(context, "/profilePage");
+                Navigator.pushNamed(context,"/profilePage");
               },
             ),
 
@@ -45,8 +137,8 @@ class AkunPage extends StatelessWidget {
               titleColor: Colors.red,
               iconColor: Colors.red,
               onTap: () async {
-                FirebaseAuth.instance.signOut();
-                Navigator.pushReplacementNamed(context, "/login");
+                await authService.signOut();
+                Navigator.pushNamed(context, "/loginPage");
               },
             ),
           ],
@@ -55,6 +147,7 @@ class AkunPage extends StatelessWidget {
     );
   }
 
+  // ---- WIDGET HELPER ----
   Widget _menuTile({
     required IconData icon,
     required String title,
@@ -69,7 +162,7 @@ class AkunPage extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: Colors.grey.shade200, 
             blurRadius: 4,
             offset: const Offset(0, 2),
           )
@@ -85,7 +178,7 @@ class AkunPage extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
         onTap: onTap,
       ),
     );
