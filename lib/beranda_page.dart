@@ -133,13 +133,13 @@ class _BerandaPageState extends State<BerandaPage> {
                 color: Colors.white,
               ),
               onPressed: () {
-                // TODO: Pindah ke halaman Notifikasi
+                Navigator.pushNamed(context, "/notifikasiPage");
               },
             ),
             IconButton(
               icon: const Icon(Icons.person_outline, color: Colors.white),
               onPressed: () {
-                // TODO: Pindah ke halaman Akun
+                Navigator.pushNamed(context, "/akunPage");
               },
             ),
           ],

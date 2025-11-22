@@ -46,7 +46,11 @@ class SellerService {
       'rating': 0.0, 
       'jumlahUlasan': 0,
     });
-  }
+
+  await _firestore.collection('users').doc(user.uid).update({
+      'role': 'penjual', 
+    });
+}
 
   // --- 3. AMBIL PRODUK SAYA (READ) ---
   Stream<QuerySnapshot> getMyProducts() {
@@ -86,5 +90,10 @@ class SellerService {
   // --- 5. HAPUS PRODUK ---
   Future<void> deleteProduct(String productId) async {
     await _firestore.collection('products').doc(productId).delete();
+  }
+
+  // --- 6. UPDATE PRODUK ---
+  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
+    await _firestore.collection('products').doc(productId).update(data);
   }
 }

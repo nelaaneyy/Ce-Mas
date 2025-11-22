@@ -15,12 +15,13 @@ dependencies:
 
   # ====== Firebase (VERSI COMPATIBLE) ======
   firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
+  firebase_auth: ^4.20.0
   cloud_firestore: ^4.14.0
-  firebase_storage: ^11.7.5
+  firebase_storage: ^11.7.7
 
   # ====== Image Picker ======
-  image_picker: ^1.0.7
+  image_picker: ^1.2.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

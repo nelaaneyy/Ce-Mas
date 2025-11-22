@@ -1,3 +1,4 @@
+import 'package:cemas/dashboard_toko_page.dart';
 import 'package:cemas/umkm_features/daftar_umkm_main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -83,9 +84,9 @@ class AkunPage extends StatelessWidget {
                     title: "Kelola Toko Saya",
                     iconColor: Colors.blue.shade800,
                     onTap: () {
-                      // TODO: Arahkan ke Dashboard Toko
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Masuk ke Dashboard Toko...")),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DashboardTokoPage()),
                       );
                     },
                   );
