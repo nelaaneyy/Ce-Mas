@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpPage extends StatefulWidget {
   final VoidCallback? onSwitchToLogin;
@@ -27,9 +28,9 @@ class _SignUpPageState extends State<SignUpPage> {
   void _register() async {
     // 1. Validasi Password
     if (_passwordController.text != _konfirmasiPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password tidak cocok!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password tidak cocok!')));
       return;
     }
 
@@ -37,7 +38,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       // 2. Proses Register ke Backend/Firebase
-      await _authService.signUpWithEmailPassword(
+      final userCredential = await _authService.signUpWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _namaPertamaController.text.trim(),
@@ -46,11 +47,29 @@ class _SignUpPageState extends State<SignUpPage> {
         _nomorHpController.text.trim(),
       );
 
+      // Ambil objek User dari UserCredential
+      final user = userCredential.user; // <-- Langsung ambil user di sini
+
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          "namaPertama": _namaPertamaController.text.trim(),
+          "namaTerakhir": _namaTerakhirController.text.trim(),
+          "username": _usernameController.text
+              .trim(), // Pastikan ProfilePage juga membaca ini jika perlu
+          "email": _emailController.text.trim(),
+          "nomorHp": _nomorHpController.text.trim(),
+          "foto": user.photoURL ?? "", // Ambil foto dari Auth jika ada
+          // Tambahkan field lain yang mungkin dibutuhkan, misal:
+          // "createdAt": FieldValue.serverTimestamp(),
+        });
+      }
+      // ===================================================================
+
       // ==================================================================
       // PERBAIKAN: Logout paksa agar sesi tidak berlanjut (Auto Login mati)
       // ==================================================================
-      await _authService.signOut(); 
-      
+      await _authService.signOut();
+
       if (!mounted) return;
 
       setState(() => _isLoading = false);
@@ -72,9 +91,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Daftar gagal: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Daftar gagal: $e')));
     }
   }
 
@@ -157,7 +176,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     const SizedBox(height: 20),
 
                     _buildField(
-                        label: 'Username', controller: _usernameController),
+                      label: 'Username',
+                      controller: _usernameController,
+                    ),
                     const SizedBox(height: 20),
 
                     _buildField(
@@ -202,8 +223,10 @@ class _SignUpPageState extends State<SignUpPage> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               "Register",
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 18),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
                             ),
                     ),
 
@@ -254,12 +277,14 @@ class _SignUpPageState extends State<SignUpPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
-            )),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black54,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -268,9 +293,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ? TextInputType.emailAddress
               : (isPhone ? TextInputType.phone : TextInputType.text),
           decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: Colors.blue.shade800),

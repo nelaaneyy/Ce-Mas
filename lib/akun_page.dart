@@ -1,5 +1,6 @@
 import 'package:cemas/umkm_features/daftar_umkm_main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'seller_service.dart';
@@ -13,7 +14,7 @@ class AkunPage extends StatelessWidget {
     final SellerService sellerService = SellerService();
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], 
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.blue.shade800,
         title: const Text('Akun', style: TextStyle(color: Colors.white)),
@@ -22,7 +23,7 @@ class AkunPage extends StatelessWidget {
         centerTitle: true,
       ),
 
-      body: SingleChildScrollView( 
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -32,7 +33,7 @@ class AkunPage extends StatelessWidget {
               builder: (context, snapshot) {
                 String nama = "Memuat...";
                 String email = "";
-                
+
                 if (snapshot.hasData && snapshot.data != null) {
                   var data = snapshot.data!;
                   nama = "${data['namaPertama']} ${data['namaTerakhir']}";
@@ -49,12 +50,12 @@ class AkunPage extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       nama,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    Text(
-                      email,
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
+                    Text(email, style: TextStyle(color: Colors.grey[600])),
                   ],
                 );
               },
@@ -66,7 +67,6 @@ class AkunPage extends StatelessWidget {
             StreamBuilder<DocumentSnapshot?>(
               stream: sellerService.getMyStoreStream(),
               builder: (context, snapshot) {
-
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -85,7 +85,9 @@ class AkunPage extends StatelessWidget {
                     onTap: () {
                       // TODO: Arahkan ke Dashboard Toko
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Masuk ke Dashboard Toko...")),
+                        const SnackBar(
+                          content: Text("Masuk ke Dashboard Toko..."),
+                        ),
                       );
                     },
                   );
@@ -98,7 +100,9 @@ class AkunPage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const DaftarUmkmMainPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const DaftarUmkmMainPage(),
+                        ),
                       );
                     },
                   );
@@ -113,7 +117,7 @@ class AkunPage extends StatelessWidget {
               icon: Icons.person_outline,
               title: "Edit Profil",
               onTap: () {
-                Navigator.pushNamed(context,"/profilePage");
+                Navigator.pushNamed(context, "/profilePage");
               },
             ),
 
@@ -139,6 +143,13 @@ class AkunPage extends StatelessWidget {
               onTap: () async {
                 await authService.signOut();
                 Navigator.pushNamed(context, "/loginPage");
+                await FirebaseAuth.instance.signOut();
+
+                // 2. HAPUS baris navigasi paksa ini:
+                // Navigator.pushReplacementNamed(context, "/login");
+
+                // Setelah signOut, AuthWrapper akan otomatis mendeteksi perubahan status
+                // dan menampilkan AuthTogglePage.
               },
             ),
           ],
@@ -162,10 +173,10 @@ class AkunPage extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200, 
+            color: Colors.grey.shade200,
             blurRadius: 4,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: ListTile(
@@ -178,7 +189,11 @@ class AkunPage extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 18,
+          color: Colors.grey,
+        ),
         onTap: onTap,
       ),
     );
