@@ -32,7 +32,10 @@ class _ProfilePageState extends State<ProfilePage> {
   // ==================================================
   Future<void> loadUser() async {
     final user = auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(() => loading = false);
+      return;
+    }
 
     try {
       // 1. Cek Database Firestore
@@ -42,49 +45,45 @@ class _ProfilePageState extends State<ProfilePage> {
       final doc = await docRef.get();
 
       if (doc.exists && doc.data() != null && doc.data()!.isNotEmpty) {
-        // SKENARIO A: Data SUDAH ADA di Database.
-        // LAKUKAN: Pakai data ini. JANGAN TIMPA dengan data Login.
-        // Ini yang menjaga agar data profilmu tidak hilang saat login ulang.
+        // SKENARIO A: Data SUDAH ADA di Database (Ini yang diharapkan saat Sign Up berhasil)
 
         setState(() {
           userData = doc.data() as Map<String, dynamic>;
+
+          // Fallback: Pastikan 'foto' dan 'email' selalu diupdate dari Auth jika datanya kosong di Firestore.
+          userData['foto'] = userData['foto'] ?? user.photoURL;
+          userData['email'] = userData['email'] ?? user.email;
+
           loading = false;
         });
       } else {
-        // SKENARIO B: Data KOSONG di Database (Pengguna Baru).
-        // LAKUKAN: Ambil data dari Auth (Login) lalu simpan ke Database.
+        // SKENARIO B: Data KOSONG di Database (Fallback untuk Social Login, dll.)
 
         String namaLengkap = user.displayName ?? "";
-        String namaDepan = "";
-        String namaBelakang = "";
+        List<String> namaSplit = namaLengkap.split(" ");
+        int length = namaSplit.length;
 
-        // Pecah nama jika ada spasi (Contoh: "Budi Santoso")
-        if (namaLengkap.isNotEmpty) {
-          List<String> split = namaLengkap.split(" ");
-          namaDepan = split.first;
-          namaBelakang = split.length > 1 ? split.sublist(1).join(" ") : "";
-        }
-
-        // Siapkan data awal
-        Map<String, dynamic> initialData = {
-          "namaPertama": namaDepan,
-          "namaTerakhir": namaBelakang,
-          "email": user.email ?? "",
-          "nomorHp": "",
-          "foto": user.photoURL ?? "",
-        };
-
-        // SIMPAN KE DATABASE (Agar besok-besok masuk ke Skenario A)
-        await docRef.set(initialData, SetOptions(merge: true));
-
+        // HANYA ambil data minimal dari Auth jika Firestore kosong
         setState(() {
-          userData = initialData;
+          userData = {
+            "namaPertama": length > 0 ? namaSplit.first : "",
+            "namaTerakhir": length > 1 ? namaSplit.sublist(1).join(" ") : "",
+            "email": user.email ?? "",
+            "nomorHp": "", // Tidak tersedia di Firebase Auth
+            "foto": user.photoURL ?? "",
+          };
           loading = false;
         });
+
+        // CATATAN: Karena kita menghapus penyimpanan data di SKENARIO B (di diskusi sebelumnya),
+        // data ini hanya akan ditampilkan. User perlu mengeditnya secara manual atau
+        // Anda perlu memastikan *semua user* melalui Sign Up manual agar data lengkap.
+        // Jika Anda tetap ingin menyimpan data minimal ini, Anda bisa menambahkan:
+        // await docRef.set(userData, SetOptions(merge: true));
       }
     } catch (e) {
       debugPrint("Error: $e");
-      setState(() => loading = false); // Stop loading jika error
+      setState(() => loading = false);
     }
   }
 

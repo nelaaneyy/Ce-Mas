@@ -38,7 +38,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
     try {
       // 2. Proses Register ke Backend/Firebase
-      final userCredential = await _authService.signUpWithEmailPassword(
+      // Penyimpanan data ke Firestore sudah ditangani oleh AuthService
+      await _authService.signUpWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _namaPertamaController.text.trim(),
@@ -47,28 +48,14 @@ class _SignUpPageState extends State<SignUpPage> {
         _nomorHpController.text.trim(),
       );
 
-      // Ambil objek User dari UserCredential
-      final user = userCredential.user; // <-- Langsung ambil user di sini
+      // **********************************************
+      // PERHATIAN: Tidak perlu kode Firestore di sini!
+      // Tidak perlu memanggil getCurrentUser() lagi!
+      // **********************************************
 
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          "namaPertama": _namaPertamaController.text.trim(),
-          "namaTerakhir": _namaTerakhirController.text.trim(),
-          "username": _usernameController.text
-              .trim(), // Pastikan ProfilePage juga membaca ini jika perlu
-          "email": _emailController.text.trim(),
-          "nomorHp": _nomorHpController.text.trim(),
-          "foto": user.photoURL ?? "", // Ambil foto dari Auth jika ada
-          // Tambahkan field lain yang mungkin dibutuhkan, misal:
-          // "createdAt": FieldValue.serverTimestamp(),
-        });
-      }
-      // ===================================================================
-
-      // ==================================================================
-      // PERBAIKAN: Logout paksa agar sesi tidak berlanjut (Auto Login mati)
-      // ==================================================================
-      await _authService.signOut();
+      // HAPUS LOGOUT PAKSA: Dengan AuthWrapper, user akan langsung
+      // diarahkan ke MainPage karena sudah otomatis login.
+      // await _authService.signOut(); // <--- HAPUS BARIS INI!
 
       if (!mounted) return;
 
@@ -82,7 +69,7 @@ class _SignUpPageState extends State<SignUpPage> {
       // 4. Tampilkan Pesan Sukses
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Akun berhasil dibuat. Silakan login kembali.'),
+          content: Text('Akun berhasil dibuat. Silakan login.'),
           backgroundColor: Colors.green,
         ),
       );
