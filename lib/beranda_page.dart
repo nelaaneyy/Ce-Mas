@@ -238,7 +238,7 @@ class _BerandaPageState extends State<BerandaPage> {
                 // TODO: Terapkan logic filter di sini
               },
               backgroundColor: Colors.white,
-              selectedColor: Colors.blue.shade100,
+              selectedColor: Colors.blue.shade800,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(color: Colors.grey[300]!),

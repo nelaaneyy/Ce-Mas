@@ -47,7 +47,7 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
               title: Text(data['namaToko'], style: const TextStyle(color: Colors.white, fontSize: 16)),
               background: (data['fotoToko'] != null && data['fotoToko'] != '')
                   ? Image.network(data['fotoToko'], fit: BoxFit.cover)
-                  : Container(color: Colors.blue.shade300, child: const Icon(Icons.store, size: 80, color: Colors.white)),
+                  : Container(color: Colors.blue.shade800, child: const Icon(Icons.store, size: 80, color: Colors.white)),
             ),
           ),
 
