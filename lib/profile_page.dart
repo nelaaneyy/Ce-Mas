@@ -90,7 +90,10 @@ class _ProfilePageState extends State<ProfilePage> {
   // =============================
   Future<void> pickImage() async {
     final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
 
     if (picked == null) return;
 
@@ -98,11 +101,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final uid = auth.currentUser!.uid;
+      final file = File(picked.path);
+
+      // Cek file exists
+      if (!await file.exists()) {
+        throw Exception('File tidak ditemukan');
+      }
+
       final storageRef = FirebaseStorage.instance.ref().child(
         "profile_images/$uid.jpg",
       );
 
-      await storageRef.putFile(File(picked.path));
+      // Upload dengan error handling lebih baik
+      final task = storageRef.putFile(file);
+      await task;
+
       final imageUrl = await storageRef.getDownloadURL();
 
       // 1. UPDATE TAMPILAN DULU (Biar cepat)
@@ -116,9 +129,26 @@ class _ProfilePageState extends State<ProfilePage> {
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "foto": imageUrl,
       }, SetOptions(merge: true));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto profil berhasil diubah'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint("Gagal upload: $e");
       setState(() => uploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal upload foto: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

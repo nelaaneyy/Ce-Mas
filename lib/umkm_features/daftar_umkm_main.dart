@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 // Import service
 // Pastikan path ini benar. '..' artinya naik satu folder ke 'lib/'
@@ -86,23 +88,65 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
 
       // 2. Cek Langsung ke Firebase Auth
       // Apakah user benar-benar sudah login/terbuat?
-      if (FirebaseAuth.instance.currentUser != null) {
-        // Jika ada user, Lanjut Buat Toko
-        await _sellerService.createStore(
-          namaToko: _data.namaUmkm,
-          deskripsi: _data.deskripsi,
-          noWhatsapp: _data.whatsapp.isEmpty ? _data.noHp : _data.whatsapp,
-          alamat: "Blok ${_data.blok} No. ${_data.nomor}",
-          kategori: _data.kategori,
-        );
-
-        if (mounted) {
-          Navigator.pop(context); // Tutup Loading
-          _showSuccessDialog(); // Tampilkan Sukses
-        }
-      } else {
-        // Jika currentUser null, berarti pendaftaran gagal
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
         throw Exception("Gagal membuat akun. Email mungkin sudah terdaftar.");
+      }
+
+      final uid = currentUser.uid;
+
+      // 3. Upload Foto KTP (opsional tapi recommended)
+      String? fotoKtpUrl;
+      if (_data.fotoKtpPath != null && _data.fotoKtpPath!.isNotEmpty) {
+        try {
+          final ktpFile = File(_data.fotoKtpPath!);
+          if (await ktpFile.exists()) {
+            final storageRef = FirebaseStorage.instance.ref().child(
+              "seller_ktp/$uid.jpg",
+            );
+            await storageRef.putFile(ktpFile);
+            fotoKtpUrl = await storageRef.getDownloadURL();
+            debugPrint("KTP foto uploaded: $fotoKtpUrl");
+          }
+        } catch (e) {
+          debugPrint("Warning: Gagal upload KTP: $e");
+          // Lanjutkan meski gagal upload KTP
+        }
+      }
+
+      // 4. Upload Foto UMKM (opsional tapi recommended)
+      String? fotoUmkmUrl;
+      if (_data.fotoUmkmPath != null && _data.fotoUmkmPath!.isNotEmpty) {
+        try {
+          final umkmFile = File(_data.fotoUmkmPath!);
+          if (await umkmFile.exists()) {
+            final storageRef = FirebaseStorage.instance.ref().child(
+              "seller_umkm/$uid.jpg",
+            );
+            await storageRef.putFile(umkmFile);
+            fotoUmkmUrl = await storageRef.getDownloadURL();
+            debugPrint("UMKM foto uploaded: $fotoUmkmUrl");
+          }
+        } catch (e) {
+          debugPrint("Warning: Gagal upload UMKM: $e");
+          // Lanjutkan meski gagal upload UMKM
+        }
+      }
+
+      // 5. Buat Toko
+      await _sellerService.createStore(
+        namaToko: _data.namaUmkm,
+        deskripsi: _data.deskripsi,
+        noWhatsapp: _data.whatsapp.isEmpty ? _data.noHp : _data.whatsapp,
+        alamat: "Blok ${_data.blok} No. ${_data.nomor}",
+        kategori: _data.kategori,
+        fotoKtpUrl: fotoKtpUrl,
+        fotoUmkmUrl: fotoUmkmUrl,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Tutup Loading
+        _showSuccessDialog(); // Tampilkan Sukses
       }
     } catch (e) {
       if (mounted) {

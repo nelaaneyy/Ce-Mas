@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'umkm_list_tile.dart'; // Import widget baru kita
+import 'umkm_search_page.dart'; // Import halaman pencarian
 
 class UmkmPage extends StatefulWidget {
   const UmkmPage({super.key});
@@ -11,7 +12,13 @@ class UmkmPage extends StatefulWidget {
 
 class _UmkmPageState extends State<UmkmPage> {
   // State untuk filter, sama seperti di BerandaPage
-  final List<String> _filters = ['Semua', 'Kelontong', 'Kuliner', 'Jasa', 'Transportasi'];
+  final List<String> _filters = [
+    'Semua',
+    'Kelontong',
+    'Kuliner',
+    'Jasa',
+    'Transportasi',
+  ];
   String _selectedFilter = 'Semua';
 
   @override
@@ -22,10 +29,7 @@ class _UmkmPageState extends State<UmkmPage> {
       appBar: AppBar(
         title: const Text(
           'UMKM',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white, 
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.blue.shade800, // Latar belakang putih
         elevation: 0,
@@ -36,10 +40,10 @@ class _UmkmPageState extends State<UmkmPage> {
         children: [
           // 2. Search Bar & Filter Button
           _buildSearchBar(),
-          
+
           // 3. Filter Chips
           _buildFilterChips(),
-          
+
           // 4. Daftar UMKM (StreamBuilder)
           _buildUmkmList(),
         ],
@@ -55,28 +59,39 @@ class _UmkmPageState extends State<UmkmPage> {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Cari UMKM/Produk/Jasa',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                fillColor: Colors.white,
-                filled: true,
-                // Border standar
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UmkmSearchPage(),
+                  ),
+                );
+              },
+              child: TextField(
+                enabled: false,
+                decoration: InputDecoration(
+                  hintText: 'Cari UMKM/Produk/Jasa',
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  fillColor: Colors.white,
+                  filled: true,
+                  // Border standar
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  // Border saat tidak di-klik
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  // Border saat di-klik
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
                 ),
-                // Border saat tidak di-klik
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                // Border saat di-klik
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.blue.shade800),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
               ),
             ),
           ),
@@ -124,7 +139,7 @@ class _UmkmPageState extends State<UmkmPage> {
       ),
     );
   }
-  
+
   // Widget untuk Daftar UMKM
   Widget _buildUmkmList() {
     // Logika query-nya sama persis dengan BerandaPage

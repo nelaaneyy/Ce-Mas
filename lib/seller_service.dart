@@ -23,6 +23,8 @@ class SellerService {
     required String alamat,
     required String kategori,
     String? fotoTokoUrl,
+    String? fotoKtpUrl,
+    String? fotoUmkmUrl,
   }) async {
     User? user = _auth.currentUser;
     if (user == null) return;
@@ -41,16 +43,19 @@ class SellerService {
       'noWhatsapp': formattedWA,
       'alamat': alamat,
       'kategori': kategori, // Penting untuk filter
-      'fotoToko': fotoTokoUrl ?? '', // Kosongkan jika tidak ada
+      'foto': fotoTokoUrl ?? '', // Foto toko utama
+      'fotoToko': fotoTokoUrl ?? '', // Kompatibilitas dengan DetailTokoPage
+      'fotoKtp': fotoKtpUrl ?? '', // Foto KTP pemilik
+      'fotoUmkm': fotoUmkmUrl ?? '', // Foto UMKM
       'createdAt': FieldValue.serverTimestamp(),
-      'rating': 0.0, 
+      'rating': 0.0,
       'jumlahUlasan': 0,
     });
 
-  await _firestore.collection('users').doc(user.uid).update({
-      'role': 'penjual', 
+    await _firestore.collection('users').doc(user.uid).update({
+      'role': 'penjual',
     });
-}
+  }
 
   // --- 3. AMBIL PRODUK SAYA (READ) ---
   Stream<QuerySnapshot> getMyProducts() {
@@ -93,7 +98,10 @@ class SellerService {
   }
 
   // --- 6. UPDATE PRODUK ---
-  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
+  Future<void> updateProduct(
+    String productId,
+    Map<String, dynamic> data,
+  ) async {
     await _firestore.collection('products').doc(productId).update(data);
   }
 }
