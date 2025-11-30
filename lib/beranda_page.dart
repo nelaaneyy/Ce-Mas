@@ -272,7 +272,6 @@ class _BerandaPageState extends State<BerandaPage> {
                 setState(() {
                   _selectedFilter = _filters[index];
                 });
-                // TODO: Terapkan logic filter di sini
               },
               backgroundColor: Colors.white,
               selectedColor: Colors.blue.shade800,
@@ -292,8 +291,12 @@ class _BerandaPageState extends State<BerandaPage> {
     return Expanded(
       child: StreamBuilder<QuerySnapshot>(
         // Kita ambil data dari koleksi 'sellers'
-        // TODO: Buat koleksi 'sellers' jika belum ada
-        stream: FirebaseFirestore.instance.collection('sellers').snapshots(),
+        stream: (_selectedFilter == 'Semua')
+            ? FirebaseFirestore.instance.collection('sellers').snapshots()
+            : FirebaseFirestore.instance
+                  .collection('sellers')
+                  .where('kategori', isEqualTo: _selectedFilter)
+                  .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

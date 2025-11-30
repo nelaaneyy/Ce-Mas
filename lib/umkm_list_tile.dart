@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'detail_toko_page.dart'; // Import untuk navigasi
 
 class UmkmListTile extends StatelessWidget {
   final DocumentSnapshot sellerData;
@@ -11,10 +12,12 @@ class UmkmListTile extends StatelessWidget {
     String namaToko = sellerData['namaToko'] ?? 'Nama Toko';
     String alamat = sellerData['alamat'] ?? 'Alamat';
     String fotoToko = sellerData['fotoToko'] ?? '';
-    
-    // Data ini belum ada di skema kita, jadi kita hardcode untuk UI
-    String rating = "4.8";
-    String ulasan = "(10 ulasan)";
+
+    // Ambil rating dan jumlah ulasan dari Firestore
+    final rating = (sellerData['rating'] as num?)?.toDouble() ?? 0.0;
+    final jumlahUlasan = sellerData['jumlahUlasan'] ?? 0;
+    String ratingStr = rating.toStringAsFixed(1);
+    String ulasan = "($jumlahUlasan ulasan)";
 
     return Card(
       // Atur margin agar ada jarak
@@ -23,8 +26,13 @@ class UmkmListTile extends StatelessWidget {
       elevation: 2,
       child: ListTile(
         onTap: () {
-          // TODO: Navigasi ke halaman detail UMKM
-          print('Pindah ke detail: $namaToko');
+          // Navigasi ke halaman detail UMKM dengan mengirim data seller
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailTokoPage(sellerData: sellerData),
+            ),
+          );
         },
         // 1. Gambar di Kiri
         leading: ClipRRect(
@@ -36,20 +44,21 @@ class UmkmListTile extends StatelessWidget {
                   height: 50,
                   fit: BoxFit.cover,
                 )
-              : Container( // Placeholder jika tidak ada foto
+              : Container(
+                  // Placeholder jika tidak ada foto
                   width: 50,
                   height: 50,
                   color: Colors.grey[200],
                   child: const Icon(Icons.store, color: Colors.grey),
                 ),
         ),
-        
+
         // 2. Judul
         title: Text(
           namaToko,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        
+
         // 3. Subtitle (Rating & Lokasi)
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,15 +66,21 @@ class UmkmListTile extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.amber, size: 16),
-                Text(" $rating", style: const TextStyle(fontSize: 12)),
-                Text(" $ulasan", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(" $ratingStr", style: const TextStyle(fontSize: 12)),
+                Text(
+                  " $ulasan",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
             const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(Icons.location_on, color: Colors.grey, size: 16),
-                Text(" $alamat", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  " $alamat",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ],

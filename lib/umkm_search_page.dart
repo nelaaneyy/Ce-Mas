@@ -12,7 +12,7 @@ class UmkmSearchPage extends StatefulWidget {
 class _UmkmSearchPageState extends State<UmkmSearchPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _hasSearched = false;
-  List<DocumentSnapshot> _searchResults = [];
+  List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = false;
 
   final List<String> _recommendationTags = [
@@ -44,12 +44,12 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
 
     try {
       final firestore = FirebaseFirestore.instance;
-      final snapshot = await firestore.collection('sellers').get();
-
-      final results = <DocumentSnapshot>[];
+      final results = <Map<String, dynamic>>[];
       final queryLower = query.toLowerCase();
 
-      for (var doc in snapshot.docs) {
+      // 1. Search UMKM/Sellers
+      final sellersSnapshot = await firestore.collection('sellers').get();
+      for (var doc in sellersSnapshot.docs) {
         final data = doc.data();
         final namaToko = (data['namaToko'] as String?)?.toLowerCase() ?? '';
         final deskripsi = (data['deskripsi'] as String?)?.toLowerCase() ?? '';
@@ -61,7 +61,35 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
             kategori.contains(queryLower);
 
         if (matches) {
-          results.add(doc);
+          results.add({
+            'type': 'seller',
+            'doc': doc,
+            'namaToko': data['namaToko'] ?? '',
+            'kategori': data['kategori'] ?? '',
+            'deskripsi': data['deskripsi'] ?? '',
+            'foto': data['foto'] ?? data['fotoToko'] ?? '',
+          });
+        }
+      }
+
+      // 2. Search Products
+      final productsSnapshot = await firestore.collection('products').get();
+      for (var doc in productsSnapshot.docs) {
+        final data = doc.data();
+        final namaProduk = (data['namaProduk'] as String?)?.toLowerCase() ?? '';
+        final deskripsi = (data['deskripsi'] as String?)?.toLowerCase() ?? '';
+        final harga = data['harga'] ?? 0;
+
+        if (namaProduk.contains(queryLower) || deskripsi.contains(queryLower)) {
+          results.add({
+            'type': 'product',
+            'doc': doc,
+            'namaProduk': data['namaProduk'] ?? '',
+            'deskripsi': data['deskripsi'] ?? '',
+            'foto': data['fotoProduk'] ?? '',
+            'harga': harga,
+            'sellerId': data['sellerId'] ?? '',
+          });
         }
       }
 
@@ -231,25 +259,29 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
       padding: const EdgeInsets.all(12),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final doc = _searchResults[index];
-        return _buildSearchResultCard(doc);
+        final item = _searchResults[index];
+        if (item['type'] == 'seller') {
+          return _buildSellerCard(item);
+        } else {
+          return _buildProductCard(item);
+        }
       },
     );
   }
 
-  Widget _buildSearchResultCard(DocumentSnapshot sellerDoc) {
-    final data = sellerDoc.data() as Map<String, dynamic>;
-    final namaToko = data['namaToko'] ?? 'Toko Tanpa Nama';
-    final kategori = data['kategori'] ?? 'Umum';
-    final deskripsi = data['deskripsi'] ?? '';
-    final foto = data['foto'] ?? data['fotoToko'] ?? '';
+  Widget _buildSellerCard(Map<String, dynamic> item) {
+    final doc = item['doc'] as DocumentSnapshot;
+    final namaToko = item['namaToko'] ?? '';
+    final kategori = item['kategori'] ?? '';
+    final deskripsi = item['deskripsi'] ?? '';
+    final foto = item['foto'] ?? '';
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailTokoPage(sellerData: sellerDoc),
+            builder: (context) => DetailTokoPage(sellerData: doc),
           ),
         );
       },
@@ -290,6 +322,25 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        "Toko",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue.shade800,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       namaToko,
                       style: const TextStyle(
@@ -306,14 +357,14 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         kategori,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade800,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
@@ -321,7 +372,115 @@ class _UmkmSearchPageState extends State<UmkmSearchPage> {
                     Text(
                       deskripsi,
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      maxLines: 2,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Arrow
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductCard(Map<String, dynamic> item) {
+    final namaProduk = item['namaProduk'] ?? '';
+    final deskripsi = item['deskripsi'] ?? '';
+    final harga = item['harga'] ?? 0;
+    final foto = item['foto'] ?? '';
+
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Produk: $namaProduk')));
+      },
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            // Foto Produk
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(12),
+                ),
+                color: Colors.grey[200],
+              ),
+              child: foto.isNotEmpty
+                  ? Image.network(
+                      foto,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          Icons.fastfood,
+                          size: 40,
+                          color: Colors.grey[400],
+                        );
+                      },
+                    )
+                  : Icon(Icons.fastfood, size: 40, color: Colors.grey[400]),
+            ),
+            // Info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        "Produk",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.green.shade800,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      namaProduk,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Rp ${harga.toString()}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      deskripsi,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
