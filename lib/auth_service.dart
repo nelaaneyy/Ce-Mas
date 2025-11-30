@@ -2,6 +2,7 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -67,6 +68,58 @@ class AuthService {
       password: password,
     );
     return userCredential;
+  }
+
+  // --- GOOGLE SIGN-IN (SOCIAL LOGIN) ---
+  Future<UserCredential> signInWithGoogle() async {
+    // Start the interactive sign in process
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+    if (googleUser == null) {
+      // The user canceled the sign-in
+      throw FirebaseAuthException(
+        code: 'ERROR_ABORTED_BY_USER',
+        message: 'Sign in aborted by user',
+      );
+    }
+
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    final idToken = googleAuth.idToken;
+    final accessToken = googleAuth.accessToken;
+
+    // Helpful debug logging (tokens redacted in logs)
+    try {
+      // Sanity check tokens
+      if (idToken == null && accessToken == null) {
+        throw FirebaseAuthException(
+          code: 'invalid-credential',
+          message: 'Missing Google ID token or access token.',
+        );
+      }
+
+      // Build a credential
+      final credential = GoogleAuthProvider.credential(
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      // Log that we're about to call Firebase using a Google credential
+      // Do NOT print raw tokens in production; printing here helps diagnose invalid-credential.
+      // We'll only log their presence (not full token contents)
+      print(
+        'AuthService.signInWithGoogle: idToken present=${idToken != null}, accessToken present=${accessToken != null}',
+      );
+
+      // Sign in to Firebase with the Google [UserCredential]
+      final userCredential = await _auth.signInWithCredential(credential);
+      return userCredential;
+    } catch (e) {
+      // Re-throw so UI can handle it and show messages
+      rethrow;
+    }
   }
 
   // --- FUNGSI SIGN OUT (LOGOUT) ---

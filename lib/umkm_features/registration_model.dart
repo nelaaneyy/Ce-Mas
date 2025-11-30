@@ -4,11 +4,11 @@ class RegistrationData {
   String username = '';
   String noHp = '';
   String password = '';
-  
+
   // Step 2: Pemilik
   String namaPemilik = '';
   String nik = '';
-  // String fotoKtpPath; 
+  String? fotoKtpPath; // Path ke file foto KTP
 
   // Step 3: UMKM
   String namaUmkm = '';
@@ -17,6 +17,8 @@ class RegistrationData {
   String nomor = '';
   String deskripsi = '';
   String linkMaps = '';
+  String? fotoUmkmPath; // Path ke file foto UMKM
+  String fotoUmkmUrl = ''; // URL setelah upload ke Firebase Storage
 
   // Step 4: Kontak
   String whatsapp = '';

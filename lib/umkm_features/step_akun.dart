@@ -4,8 +4,14 @@ import 'registration_model.dart';
 class StepAkun extends StatelessWidget {
   final RegistrationData data;
   final VoidCallback onNext;
+  final VoidCallback? onBack; // Optional back callback
 
-  const StepAkun({super.key, required this.data, required this.onNext});
+  const StepAkun({
+    super.key,
+    required this.data,
+    required this.onNext,
+    this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,31 +19,71 @@ class StepAkun extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const Text("Data Akun", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const Text("Informasi dasar untuk login", style: TextStyle(color: Colors.grey)),
+          const Text(
+            "Data Akun",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const Text(
+            "Informasi dasar untuk login",
+            style: TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 20),
 
-          _buildTextField('Email *', (val) => data.email = val, initial: data.email),
-          _buildTextField('Username *', (val) => data.username = val, initial: data.username),
-          _buildTextField('Password *', (val) => data.password = val, isPass: true, initial: data.password),
+          _buildTextField(
+            'Email *',
+            (val) => data.email = val,
+            initial: data.email,
+          ),
+          _buildTextField(
+            'Username *',
+            (val) => data.username = val,
+            initial: data.username,
+          ),
+          _buildTextField(
+            'Password *',
+            (val) => data.password = val,
+            isPass: true,
+            initial: data.password,
+          ),
           // Konfirmasi password logic bisa ditambah validasi nanti
           _buildTextField('Konfirmasi Password *', (val) {}, isPass: true),
 
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onNext,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade800),
-              child: const Text('Lanjut', style: TextStyle(color: Colors.white)),
-            ),
+          Row(
+            children: [
+              if (onBack != null)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onBack,
+                    child: const Text('Kembali'),
+                  ),
+                ),
+              if (onBack != null) const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onNext,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade800,
+                  ),
+                  child: const Text(
+                    'Lanjut',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(String label, Function(String) onChanged, {bool isPass = false, String? initial}) {
+  Widget _buildTextField(
+    String label,
+    Function(String) onChanged, {
+    bool isPass = false,
+    String? initial,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: TextFormField(

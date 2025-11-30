@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart'; // Pastikan file ini ada
 
 class LoginPage extends StatefulWidget {
@@ -27,13 +28,72 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await _authService.signInWithEmailPassword(
-        _emailController.text,
+        _emailController.text.trim(),
         _passwordController.text,
+      );
+    } on FirebaseAuthException catch (e) {
+      // Tampilkan pesan yang lebih jelas untuk kode error umum
+      String message;
+      switch (e.code) {
+        case 'invalid-email':
+          message = 'Format email tidak valid.';
+          break;
+        case 'user-disabled':
+          message = 'Akun dinonaktifkan.';
+          break;
+        case 'user-not-found':
+          message = 'Email belum terdaftar.';
+          break;
+        case 'wrong-password':
+          message = 'Password salah.';
+          break;
+        case 'invalid-credential':
+          message = 'Kredensial tidak valid atau kadaluarsa.';
+          break;
+        default:
+          message = e.message ?? 'Terjadi kesalahan saat login.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login Gagal: $message (${e.code})')),
       );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Login Gagal: ${e.toString()}')));
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _loginWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signInWithGoogle();
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'ERROR_ABORTED_BY_USER') {
+        message = 'Login dibatalkan oleh pengguna.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Kredensial Google tidak valid atau kadaluarsa.';
+      } else {
+        message = e.message ?? 'Terjadi kesalahan saat login dengan Google.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Gagal: $message (${e.code})')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Gagal: ${e.toString()}')),
+      );
     }
 
     if (mounted) {
@@ -155,7 +215,7 @@ class _LoginPageState extends State<LoginPage> {
                     _buildSocialButton(
                       label: 'Continue with Google',
                       iconAsset: 'assets/images/logogoogle.png',
-                      onPressed: () {},
+                      onPressed: _isLoading ? () {} : _loginWithGoogle,
                     ),
                     const SizedBox(height: 15),
                     _buildSocialButton(

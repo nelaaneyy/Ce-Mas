@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
+import 'umkm_features/daftar_umkm_main.dart';
 
 class SignUpPage extends StatefulWidget {
   final VoidCallback? onSwitchToLogin;
@@ -219,7 +220,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     const SizedBox(height: 20),
 
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const DaftarUmkmMainPage(showBackButton: true),
+                          ),
+                        );
+                      },
                       child: Text(
                         "Daftar sebagai UMKM? Sign In",
                         textAlign: TextAlign.center,

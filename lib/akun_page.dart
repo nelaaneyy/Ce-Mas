@@ -36,9 +36,14 @@ class AkunPage extends StatelessWidget {
                 String email = "";
 
                 if (snapshot.hasData && snapshot.data != null) {
-                  var data = snapshot.data!;
-                  nama = "${data['namaPertama']} ${data['namaTerakhir']}";
-                  email = data['email'];
+                  final doc = snapshot.data!;
+                  if (doc.exists && doc.data() != null) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final f = (data['namaPertama'] as String?) ?? "";
+                    final l = (data['namaTerakhir'] as String?) ?? "";
+                    nama = (f + (l.isNotEmpty ? ' $l' : '')).trim();
+                    email = (data['email'] as String?) ?? "";
+                  }
                 }
 
                 return Column(
@@ -55,6 +60,8 @@ class AkunPage extends StatelessWidget {
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(email, style: TextStyle(color: Colors.grey[600])),
                   ],
@@ -86,7 +93,9 @@ class AkunPage extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const DashboardTokoPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const DashboardTokoPage(),
+                        ),
                       );
                     },
                   );
@@ -100,7 +109,8 @@ class AkunPage extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const DaftarUmkmMainPage(),
+                          builder: (context) =>
+                              const DaftarUmkmMainPage(showBackButton: true),
                         ),
                       );
                     },

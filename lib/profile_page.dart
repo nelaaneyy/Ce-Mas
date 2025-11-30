@@ -63,23 +63,21 @@ class _ProfilePageState extends State<ProfilePage> {
         List<String> namaSplit = namaLengkap.split(" ");
         int length = namaSplit.length;
 
-        // HANYA ambil data minimal dari Auth jika Firestore kosong
+        // AMBIL data minimal dari Auth jika Firestore kosong
+        userData = {
+          "namaPertama": length > 0 ? namaSplit.first : "",
+          "namaTerakhir": length > 1 ? namaSplit.sublist(1).join(" ") : "",
+          "email": user.email ?? "",
+          "nomorHp": "", // Tidak tersedia di Firebase Auth
+          "foto": user.photoURL ?? "",
+        };
+
+        // SIMPAN data minimal ke Firestore agar tersedia untuk UMKM registration
+        await docRef.set(userData, SetOptions(merge: true));
+
         setState(() {
-          userData = {
-            "namaPertama": length > 0 ? namaSplit.first : "",
-            "namaTerakhir": length > 1 ? namaSplit.sublist(1).join(" ") : "",
-            "email": user.email ?? "",
-            "nomorHp": "", // Tidak tersedia di Firebase Auth
-            "foto": user.photoURL ?? "",
-          };
           loading = false;
         });
-
-        // CATATAN: Karena kita menghapus penyimpanan data di SKENARIO B (di diskusi sebelumnya),
-        // data ini hanya akan ditampilkan. User perlu mengeditnya secara manual atau
-        // Anda perlu memastikan *semua user* melalui Sign Up manual agar data lengkap.
-        // Jika Anda tetap ingin menyimpan data minimal ini, Anda bisa menambahkan:
-        // await docRef.set(userData, SetOptions(merge: true));
       }
     } catch (e) {
       debugPrint("Error: $e");
@@ -158,12 +156,31 @@ class _ProfilePageState extends State<ProfilePage> {
                     userData[field] = newValue;
                   });
 
-                  // 2. UPDATE DATABASE
-                  // Pakai merge: true agar field lain aman
-                  await FirebaseFirestore.instance
-                      .collection("users")
-                      .doc(auth.currentUser!.uid)
-                      .set({field: newValue}, SetOptions(merge: true));
+                  try {
+                    // 2. UPDATE DATABASE
+                    // Pakai merge: true agar field lain aman
+                    await FirebaseFirestore.instance
+                        .collection("users")
+                        .doc(auth.currentUser!.uid)
+                        .set({field: newValue}, SetOptions(merge: true));
+
+                    // 3. SHOW SUCCESS MESSAGE
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Data berhasil disimpan'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // SHOW ERROR MESSAGE
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    }
+                  }
                 }
               },
               child: const Text("Simpan"),
@@ -241,9 +258,18 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 12),
 
           Center(
-            child: Text(
-              "$fName $lName",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Text(
+                "$fName $lName",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
 
@@ -290,8 +316,13 @@ class _ProfilePageState extends State<ProfilePage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: ListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: const Icon(Icons.edit),
         onTap: onTap,
       ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'registration_model.dart';
 
@@ -7,10 +8,10 @@ class StepReview extends StatelessWidget {
   final VoidCallback onBack;
 
   const StepReview({
-    super.key, 
-    required this.data, 
-    required this.onSubmit, 
-    required this.onBack
+    super.key,
+    required this.data,
+    required this.onSubmit,
+    required this.onBack,
   });
 
   @override
@@ -23,9 +24,15 @@ class StepReview extends StatelessWidget {
           const Center(
             child: Column(
               children: [
-                Text("Review Data", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(
+                  "Review Data",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
                 SizedBox(height: 5),
-                Text("Pastikan data sudah benar sebelum dikirim", style: TextStyle(color: Colors.grey)),
+                Text(
+                  "Pastikan data sudah benar sebelum dikirim",
+                  style: TextStyle(color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -44,12 +51,36 @@ class StepReview extends StatelessWidget {
           _buildInfoRow("Kategori", data.kategori),
           _buildInfoRow("Alamat", "Blok ${data.blok} No. ${data.nomor}"),
           _buildInfoRow("Deskripsi", data.deskripsi),
+          if (data.fotoUmkmPath != null) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Foto UMKM:',
+              style: TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                File(data.fotoUmkmPath!),
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
 
           const Divider(height: 30),
 
           _buildSectionTitle("Kontak"),
           _buildInfoRow("WhatsApp", data.whatsapp),
-          _buildInfoRow("Instagram", data.instagram.isEmpty ? '-' : data.instagram),
+          _buildInfoRow(
+            "Instagram",
+            data.instagram.isEmpty ? '-' : data.instagram,
+          ),
 
           const SizedBox(height: 40),
 
@@ -61,9 +92,14 @@ class StepReview extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade800,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: const Text('Kirim Untuk Verifikasi', style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text(
+                'Kirim Untuk Verifikasi',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -73,7 +109,9 @@ class StepReview extends StatelessWidget {
               onPressed: onBack,
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: const Text('Kembali'),
             ),
@@ -86,7 +124,14 @@ class StepReview extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Colors.blue,
+        ),
+      ),
     );
   }
 
@@ -101,7 +146,10 @@ class StepReview extends StatelessWidget {
             child: Text(label, style: const TextStyle(color: Colors.grey)),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),

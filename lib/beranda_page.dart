@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'umkm_card.dart'; // Import card yang baru kita buat
+import 'umkm_search_results.dart'; // Import halaman hasil pencarian
 
 class BerandaPage extends StatefulWidget {
   const BerandaPage({super.key, required void Function(int index) onTabJump});
@@ -13,6 +14,7 @@ class BerandaPage extends StatefulWidget {
 class _BerandaPageState extends State<BerandaPage> {
   final AuthService _authService = AuthService();
   late Future<DocumentSnapshot?> _userDataFuture;
+  final TextEditingController _searchController = TextEditingController();
 
   // Data untuk filter chips
   final List<String> _filters = [
@@ -29,6 +31,12 @@ class _BerandaPageState extends State<BerandaPage> {
     super.initState();
     // Panggil fungsi untuk ambil data user saat halaman dimuat
     _userDataFuture = _authService.getCurrentUserData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -159,19 +167,26 @@ class _BerandaPageState extends State<BerandaPage> {
           );
         }
         if (snapshot.hasData && snapshot.data != null) {
-          // Ambil nama dari dokumen Firestore
-          String nama = snapshot.data!['namaPertama'] ?? 'Pengguna';
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Halo, $nama!',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+          final doc = snapshot.data!;
+          if (doc.exists && doc.data() != null) {
+            final data = doc.data() as Map<String, dynamic>;
+            final String nama =
+                (data['namaPertama'] as String?)?.isNotEmpty == true
+                ? data['namaPertama'] as String
+                : 'Pengguna';
+
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Halo, $nama!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
         // Tampilkan default jika data tidak ada
         return const Align(
@@ -194,6 +209,7 @@ class _BerandaPageState extends State<BerandaPage> {
       children: [
         Expanded(
           child: TextField(
+            controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Cari UMKM/Produk/Jasa',
               prefixIcon: const Icon(Icons.search),
@@ -205,6 +221,7 @@ class _BerandaPageState extends State<BerandaPage> {
               ),
               contentPadding: EdgeInsets.zero,
             ),
+            onSubmitted: (_) => _performSearch(),
           ),
         ),
         const SizedBox(width: 10),
@@ -215,6 +232,26 @@ class _BerandaPageState extends State<BerandaPage> {
           },
         ),
       ],
+    );
+  }
+
+  void _performSearch() {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan kata kunci pencarian')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UmkmSearchResults(
+          searchQuery: query,
+          selectedFilter: _selectedFilter == 'Semua' ? null : _selectedFilter,
+        ),
+      ),
     );
   }
 

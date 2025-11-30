@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // Import service
 // Pastikan path ini benar. '..' artinya naik satu folder ke 'lib/'
-import '../auth_service.dart'; 
+import '../auth_service.dart';
 import '../seller_service.dart';
 
 // Import model dan steps
@@ -15,7 +15,9 @@ import 'step_kontak.dart';
 import 'step_review.dart';
 
 class DaftarUmkmMainPage extends StatefulWidget {
-  const DaftarUmkmMainPage({super.key});
+  final bool showBackButton; // Flag untuk menentukan apakah tampil back button
+
+  const DaftarUmkmMainPage({super.key, this.showBackButton = false});
 
   @override
   State<DaftarUmkmMainPage> createState() => _DaftarUmkmMainPageState();
@@ -24,10 +26,10 @@ class DaftarUmkmMainPage extends StatefulWidget {
 class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  
+
   // Data penampung
   final RegistrationData _data = RegistrationData();
-  
+
   // Service didefinisikan di sini agar bisa diakses seluruh class
   final AuthService _authService = AuthService();
   final SellerService _sellerService = SellerService();
@@ -36,8 +38,8 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
   void _nextPage() {
     if (_currentStep < 4) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300), 
-        curve: Curves.easeInOut
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
       setState(() => _currentStep++);
     }
@@ -46,8 +48,8 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
   void _prevPage() {
     if (_currentStep > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300), 
-        curve: Curves.easeInOut
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
       setState(() => _currentStep--);
     } else {
@@ -57,8 +59,8 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
 
   void _jumpToPage(int pageIndex) {
     if (pageIndex <= _currentStep) {
-       _pageController.jumpToPage(pageIndex);
-       setState(() => _currentStep = pageIndex);
+      _pageController.jumpToPage(pageIndex);
+      setState(() => _currentStep = pageIndex);
     }
   }
 
@@ -77,7 +79,7 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
         _data.email,
         _data.password,
         _data.namaPemilik,
-        "", 
+        "",
         _data.username,
         _data.noHp,
       );
@@ -85,7 +87,6 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
       // 2. Cek Langsung ke Firebase Auth
       // Apakah user benar-benar sudah login/terbuat?
       if (FirebaseAuth.instance.currentUser != null) {
-        
         // Jika ada user, Lanjut Buat Toko
         await _sellerService.createStore(
           namaToko: _data.namaUmkm,
@@ -97,19 +98,18 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
 
         if (mounted) {
           Navigator.pop(context); // Tutup Loading
-          _showSuccessDialog();   // Tampilkan Sukses
+          _showSuccessDialog(); // Tampilkan Sukses
         }
       } else {
         // Jika currentUser null, berarti pendaftaran gagal
         throw Exception("Gagal membuat akun. Email mungkin sudah terdaftar.");
       }
-
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Tutup Loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
       }
     }
   }
@@ -125,7 +125,11 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
+              const Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+                size: 80,
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Registrasi Berhasil!',
@@ -143,15 +147,20 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade800,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () {
                     Navigator.of(ctx).pop(); // Tutup Dialog
                     Navigator.of(context).pop(); // Kembali ke Halaman Akun
                   },
-                  child: const Text('Selesai', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Selesai',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -169,19 +178,25 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
         children: [
           // Header Biru
           Positioned(
-            top: 60, left: 0, right: 0,
+            top: 60,
+            left: 0,
+            right: 0,
             child: Column(
               children: [
                 // Ganti dengan Image.asset jika ada logo
                 const CircleAvatar(
-                  radius: 40, 
-                  backgroundColor: Colors.white, 
-                  child: Icon(Icons.store, size: 40, color: Colors.blue)
+                  radius: 40,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.store, size: 40, color: Colors.blue),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Sign up UMKM', 
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
+                  'Sign up UMKM',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -190,7 +205,9 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
           // Container Putih
           Positioned(
             top: screenSize.height * 0.25,
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -199,25 +216,45 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // TAB INDIKATOR
                   _buildStepIndicator(),
-                  
+
                   const Divider(),
-                  
+
                   // ISI HALAMAN (PageView)
                   Expanded(
                     child: PageView(
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        StepAkun(data: _data, onNext: _nextPage),
-                        StepPemilik(data: _data, onNext: _nextPage, onBack: _prevPage),
-                        StepUMKM(data: _data, onNext: _nextPage, onBack: _prevPage),
-                        StepKontak(data: _data, onNext: _nextPage, onBack: _prevPage),
-                        
+                        StepAkun(
+                          data: _data,
+                          onNext: _nextPage,
+                          onBack: widget.showBackButton ? _prevPage : null,
+                        ),
+                        StepPemilik(
+                          data: _data,
+                          onNext: _nextPage,
+                          onBack: _prevPage,
+                        ),
+                        StepUMKM(
+                          data: _data,
+                          onNext: _nextPage,
+                          onBack: _prevPage,
+                        ),
+                        StepKontak(
+                          data: _data,
+                          onNext: _nextPage,
+                          onBack: _prevPage,
+                        ),
+
                         // Step Review memanggil fungsi _submitData
-                        StepReview(data: _data, onSubmit: _submitData, onBack: _prevPage),
+                        StepReview(
+                          data: _data,
+                          onSubmit: _submitData,
+                          onBack: _prevPage,
+                        ),
                       ],
                     ),
                   ),
@@ -240,9 +277,13 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
           onTap: () => _jumpToPage(index),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            decoration: isActive ? const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.blue, width: 2))
-            ) : null,
+            decoration: isActive
+                ? const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.blue, width: 2),
+                    ),
+                  )
+                : null,
             child: Text(
               steps[index],
               style: TextStyle(
