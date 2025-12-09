@@ -25,4 +25,9 @@ class RegistrationData {
   String instagram = '';
   String facebook = '';
   String tiktok = '';
+
+  // Step 5: Admin & Verification
+  String uid = ''; // Added for Admin actions
+  String alamatLengkap = '';
+  String status = 'Menunggu';
 }

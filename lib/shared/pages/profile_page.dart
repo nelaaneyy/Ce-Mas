@@ -14,79 +14,10 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final auth = FirebaseAuth.instance;
-
-  // Inisialisasi agar tidak error null
-  Map<String, dynamic> userData = {};
-
-  bool loading = true;
   bool uploadingImage = false;
 
-  @override
-  void initState() {
-    super.initState();
-    loadUser();
-  }
-
-  // ==================================================
-  // INI BAGIAN KUNCI (PERBAIKAN LOGIKA DATA)
-  // ==================================================
-  Future<void> loadUser() async {
-    final user = auth.currentUser;
-    if (user == null) {
-      setState(() => loading = false);
-      return;
-    }
-
-    try {
-      // 1. Cek Database Firestore
-      final docRef = FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid);
-      final doc = await docRef.get();
-
-      if (doc.exists && doc.data() != null && doc.data()!.isNotEmpty) {
-        // SKENARIO A: Data SUDAH ADA di Database (Ini yang diharapkan saat Sign Up berhasil)
-
-        setState(() {
-          userData = doc.data() as Map<String, dynamic>;
-
-          // Fallback: Pastikan 'foto' dan 'email' selalu diupdate dari Auth jika datanya kosong di Firestore.
-          userData['foto'] = userData['foto'] ?? user.photoURL;
-          userData['email'] = userData['email'] ?? user.email;
-
-          loading = false;
-        });
-      } else {
-        // SKENARIO B: Data KOSONG di Database (Fallback untuk Social Login, dll.)
-
-        String namaLengkap = user.displayName ?? "";
-        List<String> namaSplit = namaLengkap.split(" ");
-        int length = namaSplit.length;
-
-        // AMBIL data minimal dari Auth jika Firestore kosong
-        userData = {
-          "namaPertama": length > 0 ? namaSplit.first : "",
-          "namaTerakhir": length > 1 ? namaSplit.sublist(1).join(" ") : "",
-          "email": user.email ?? "",
-          "nomorHp": "", // Tidak tersedia di Firebase Auth
-          "foto": user.photoURL ?? "",
-        };
-
-        // SIMPAN data minimal ke Firestore agar tersedia untuk UMKM registration
-        await docRef.set(userData, SetOptions(merge: true));
-
-        setState(() {
-          loading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error: $e");
-      setState(() => loading = false);
-    }
-  }
-
   // =============================
-  // UPLOAD FOTO (LANGSUNG BERUBAH)
+  // UPLOAD FOTO (LANGSUNG BERUBAH DI FIRESTORE)
   // =============================
   Future<void> pickImage() async {
     final picker = ImagePicker();
@@ -118,19 +49,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       final imageUrl = await storageRef.getDownloadURL();
 
-      // 1. UPDATE TAMPILAN DULU (Biar cepat)
-      setState(() {
-        userData["foto"] = imageUrl;
-        uploadingImage = false;
-      });
-
-      // 2. UPDATE DATABASE DI BACKGROUND
-      // Pakai merge: true agar nama & email TIDAK TERHAPUS
+      // UPDATE DATABASE
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "foto": imageUrl,
       }, SetOptions(merge: true));
 
       if (mounted) {
+        setState(() => uploadingImage = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Foto profil berhasil diubah'),
@@ -140,9 +65,9 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e) {
       debugPrint("Gagal upload: $e");
-      setState(() => uploadingImage = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+         setState(() => uploadingImage = false);
+         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal upload foto: $e'),
             duration: const Duration(seconds: 3),
@@ -153,7 +78,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // =============================
-  // EDIT FIELD (LANGSUNG BERUBAH)
+  // EDIT FIELD (LANGSUNG BERUBAH DI FIRESTORE)
   // =============================
   void editField(String field, String label, String value) {
     final controller = TextEditingController(text: value);
@@ -181,20 +106,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 Navigator.pop(context); // Tutup dialog
 
                 if (newValue.isNotEmpty) {
-                  // 1. UPDATE TAMPILAN DULU (Optimistic Update)
-                  setState(() {
-                    userData[field] = newValue;
-                  });
-
                   try {
-                    // 2. UPDATE DATABASE
-                    // Pakai merge: true agar field lain aman
+                    // UPDATE DATABASE
                     await FirebaseFirestore.instance
                         .collection("users")
                         .doc(auth.currentUser!.uid)
                         .set({field: newValue}, SetOptions(merge: true));
 
-                    // 3. SHOW SUCCESS MESSAGE
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -204,7 +122,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       );
                     }
                   } catch (e) {
-                    // SHOW ERROR MESSAGE
                     if (mounted) {
                       ScaffoldMessenger.of(
                         context,
@@ -223,16 +140,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final user = auth.currentUser;
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text("User not found")));
     }
-
-    // Ambil data dengan pengecekan null agar aman
-    String fName = userData['namaPertama'] ?? "";
-    String lName = userData['namaTerakhir'] ?? "";
-    String email = userData['email'] ?? "";
-    String phone = userData['nomorHp'] ?? "";
-    String foto = userData['foto'] ?? "";
 
     return Scaffold(
       appBar: AppBar(
@@ -240,95 +151,124 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance.collection("users").doc(user.uid).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 55,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: (foto.isNotEmpty)
-                      ? NetworkImage(foto)
-                      : null,
-                  child: (foto.isEmpty)
-                      ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                      : null,
+          Map<String, dynamic> userData = {};
+          
+          if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+             userData = snapshot.data!.data() as Map<String, dynamic>;
+          } 
+
+          // Fallback / Defaults logic (tapi tidak save otomatis disini untuk hindari infinite loop build)
+          // Kita hanya display fallback values.
+          String fName = userData['namaPertama'] ?? "";
+          String lName = userData['namaTerakhir'] ?? "";
+          String email = userData['email'] ?? user.email ?? "";
+          String phone = userData['nomorHp'] ?? "";
+          String foto = userData['foto'] ?? user.photoURL ?? "";
+
+          // Auto-parse name if empty in DB but exists in Auth (Display only)
+          if (fName.isEmpty && user.displayName != null && user.displayName!.isNotEmpty) {
+             List<String> namaSplit = user.displayName!.split(" ");
+             if (namaSplit.isNotEmpty) fName = namaSplit.first;
+             if (namaSplit.length > 1) lName = namaSplit.sublist(1).join(" ");
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: (foto.isNotEmpty)
+                          ? NetworkImage(foto)
+                          : null,
+                      child: (foto.isEmpty)
+                          ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                          : null,
+                    ),
+
+                    // Tombol edit foto
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.blue.shade800,
+                        radius: 18,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: uploadingImage ? null : pickImage,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (uploadingImage)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
 
-                // Tombol edit foto
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: CircleAvatar(
-                    backgroundColor: Colors.blue.shade800,
-                    radius: 18,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.camera_alt,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      onPressed: uploadingImage ? null : pickImage,
+              const SizedBox(height: 12),
+
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Text(
+                    "$fName $lName",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          if (uploadingImage)
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-
-          const SizedBox(height: 12),
-
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Text(
-                "$fName $lName",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
               ),
-            ),
-          ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          _profileTile(
-            title: "Nama Depan",
-            subtitle: fName.isEmpty ? "-" : fName,
-            onTap: () => editField("namaPertama", "Nama Depan", fName),
-          ),
+              _profileTile(
+                title: "Nama Depan",
+                subtitle: fName.isEmpty ? "-" : fName,
+                onTap: () => editField("namaPertama", "Nama Depan", fName),
+              ),
 
-          _profileTile(
-            title: "Nama Belakang",
-            subtitle: lName.isEmpty ? "-" : lName,
-            onTap: () => editField("namaTerakhir", "Nama Belakang", lName),
-          ),
+              _profileTile(
+                title: "Nama Belakang",
+                subtitle: lName.isEmpty ? "-" : lName,
+                onTap: () => editField("namaTerakhir", "Nama Belakang", lName),
+              ),
 
-          _profileTile(
-            title: "Email",
-            subtitle: email.isEmpty ? "-" : email,
-            onTap: () => editField("email", "Email", email),
-          ),
+              _profileTile(
+                title: "Email",
+                subtitle: email.isEmpty ? "-" : email,
+                onTap: () => editField("email", "Email", email),
+              ),
 
-          _profileTile(
-            title: "Nomor HP",
-            subtitle: phone.isEmpty ? "-" : phone,
-            onTap: () => editField("nomorHp", "Nomor HP", phone),
-          ),
-        ],
+              _profileTile(
+                title: "Nomor HP",
+                subtitle: phone.isEmpty ? "-" : phone,
+                onTap: () => editField("nomorHp", "Nomor HP", phone),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

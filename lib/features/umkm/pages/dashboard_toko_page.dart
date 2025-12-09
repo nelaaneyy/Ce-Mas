@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cemas/features/umkm/pages/kelola_toko_page.dart';
+import 'package:cemas/features/umkm/services/seller_service.dart';
 
 class DashboardTokoPage extends StatefulWidget {
   const DashboardTokoPage({super.key});
@@ -38,6 +39,9 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
           }
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
+          String status = data['status'] ?? 'Menunggu';
+          bool isVerified = status == 'Terverifikasi';
+
           String namaToko = data['namaToko'] ?? 'Nama Toko';
           String kategori = data['kategori'] ?? '-';
           String alamat = data['alamat'] ?? '-';
@@ -49,6 +53,35 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
               children: [
                 // Header Section
                 _buildHeader(namaToko),
+
+                // STATUS BANNER for Unverified/Rejected
+                if (!isVerified)
+                  Container(
+                    width: double.infinity,
+                    color: status == 'Ditolak' ? Colors.red : Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          status == 'Ditolak' ? Icons.cancel : Icons.info_outline,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          status == 'Ditolak'
+                              ? "Verifikasi Ditolak. Hubungi Admin."
+                              : "Menunggu Verifikasi Admin. Fitur dibatasi.",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 const SizedBox(height: 20),
 
@@ -66,8 +99,58 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Statistics Cards (2x2 Grid)
-                          _buildStatisticsGrid(),
+                          // Statistics Cards (2x2 Grid) - Realtime
+                          StreamBuilder<Map<String, dynamic>>(
+                            stream: SellerService().getStoreStatsStream(),
+                            builder: (context, statsSnapshot) {
+                              // Default values / Loading state
+                              String productCount = '...';
+                              String rating = '...';
+                              String chatCount = '0';
+                              String views = '0'; // Placeholder
+
+                              if (statsSnapshot.hasData) {
+                                productCount = statsSnapshot.data!['products'].toString();
+                                rating = statsSnapshot.data!['rating'].toStringAsFixed(1);
+                                // chatCount removed
+                                views = statsSnapshot.data!['views'].toString();
+                              }
+
+                              return Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildEnhancedStatCard(
+                                          value: productCount,
+                                          label: 'Produk',
+                                          icon: Icons.inventory_2_outlined,
+                                          gradientColors: const [Color(0xFF0A6EBD), Color(0xFF1E88E5)],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: _buildEnhancedStatCard(
+                                          value: views,
+                                          label: 'Dilihat',
+                                          icon: Icons.visibility_outlined,
+                                          gradientColors: const [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Rating Full Width
+                                  _buildEnhancedStatCard(
+                                    value: rating,
+                                    label: 'Rating',
+                                    icon: Icons.star,
+                                    gradientColors: const [Color(0xFFFFA726), Color(0xFFFFB74D)],
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
 
                           const SizedBox(height: 20),
 
@@ -97,8 +180,8 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
 
                           const SizedBox(height: 30),
 
-                          // Primary Action Button
-                          _buildPrimaryButton(),
+                          // Primary Action Button (LOCKED if not verified)
+                          _buildPrimaryButton(isVerified),
 
                           const SizedBox(height: 20),
                         ],
@@ -134,21 +217,46 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
                   size: 24,
                 ),
               ),
-              // Notification Icon
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
+                // Notification Icon
+              Row(
+                children: [
+                   Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        // Navigate to AkunPage with flag
+                        Navigator.pushNamed(
+                          context, 
+                          "/akunPage",
+                          arguments: {'isFromStore': true},
+                        ); 
+                      },
+                    ),
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, "/notifikasiPage");
-                  },
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, "/notifikasiPage");
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -168,54 +276,7 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
     );
   }
 
-  // Statistics Grid (2x2) - Enhanced Design
-  Widget _buildStatisticsGrid() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              _buildEnhancedStatCard(
-                value: '15',
-                label: 'Produk',
-                icon: Icons.inventory_2_outlined,
-                gradientColors: [Color(0xFF0A6EBD), Color(0xFF1E88E5)],
-              ),
-              const SizedBox(height: 12),
-              _buildEnhancedStatCard(
-                value: '64',
-                label: 'Chat',
-                icon: Icons.chat_bubble_outline,
-                gradientColors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            children: [
-              _buildEnhancedStatCard(
-                value: '120',
-                label: 'Dilihat',
-                icon: Icons.visibility_outlined,
-                gradientColors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-              ),
-              const SizedBox(height: 12),
-              _buildEnhancedStatCard(
-                value: '4.8',
-                label: 'Rating',
-                icon: Icons.star,
-                gradientColors: [Color(0xFFFFA726), Color(0xFFFFB74D)],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Enhanced Stat Card with Gradient
+  // Enhanced Stat Card with Gradient & Interaction
   Widget _buildEnhancedStatCard({
     required String value,
     required String label,
@@ -223,7 +284,6 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
     required List<Color> gradientColors,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -240,44 +300,58 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon with background circle
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 32,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            // Placeholder for future action
+          },
+          splashColor: Colors.white.withOpacity(0.2),
+          highlightColor: Colors.white.withOpacity(0.1),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon with background circle
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Value
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Label
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          // Value
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Label
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.9),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -292,6 +366,13 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: (fotoToko != null && fotoToko.isNotEmpty)
             ? Image.network(
@@ -358,41 +439,72 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
     );
   }
 
-  // Primary Action Button
-  Widget _buildPrimaryButton() {
-    return SizedBox(
+  // Primary Action Button (LOCKED LOGIC - Premium Style)
+  Widget _buildPrimaryButton(bool isVerified) {
+    return Container(
       width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const KelolaTokoPage(),
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0A6EBD),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.inventory_2_outlined, size: 20),
-            SizedBox(width: 8),
-            Text(
-              'Kelola Produk',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+      height: 55,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: isVerified
+            ? const LinearGradient(
+                colors: [Color(0xFF0A6EBD), Color(0xFF29B6F6)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              )
+            : null,
+        color: isVerified ? null : Colors.grey[300],
+        boxShadow: isVerified
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF0A6EBD).withOpacity(0.4),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            if (isVerified) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KelolaTokoPage(),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Menu terkunci. Tunggu verifikasi admin.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isVerified ? Icons.inventory_2_outlined : Icons.lock_outline,
+                color: isVerified ? Colors.white : Colors.grey[600],
+                size: 24,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                'Kelola Produk',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isVerified ? Colors.white : Colors.grey[600],
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -9,8 +9,11 @@ import 'package:cemas/features/umkm/pages/dashboard_toko_page.dart';
 import 'package:cemas/shared/pages/profile_page.dart';
 import 'package:cemas/shared/pages/tentang_kami.dart';
 import 'package:cemas/shared/pages/login_page.dart';
+import 'package:cemas/shared/pages/layanan_aduan_page.dart';
+import 'package:cemas/shared/register_page.dart';
 
 class AkunPage extends StatelessWidget {
+
   const AkunPage({super.key});
 
   @override
@@ -33,8 +36,10 @@ class AkunPage extends StatelessWidget {
         child: Column(
           children: [
             // ---- HEADER PROFILE ----
-            FutureBuilder<DocumentSnapshot?>(
-              future: authService.getCurrentUserData(),
+            StreamBuilder<DocumentSnapshot?>(
+              stream: FirebaseAuth.instance.currentUser != null 
+                  ? FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).snapshots()
+                  : null,
               builder: (context, snapshot) {
                 String nama = "Memuat...";
                 String email = "";
@@ -47,7 +52,11 @@ class AkunPage extends StatelessWidget {
                     final l = (data['namaTerakhir'] as String?) ?? "";
                     nama = (f + (l.isNotEmpty ? ' $l' : '')).trim();
                     email = (data['email'] as String?) ?? "";
+                  } else {
+                     nama = "Pengguna";
                   }
+                } else if (snapshot.connectionState == ConnectionState.active && snapshot.data == null) {
+                   nama = "Belum Login";
                 }
 
                 return Column(
@@ -86,6 +95,22 @@ class AkunPage extends StatelessWidget {
                 bool hasStore = false;
                 if (snapshot.hasData && snapshot.data != null) {
                   hasStore = snapshot.data!.exists;
+                }
+
+                // Check arguments
+                final args = ModalRoute.of(context)?.settings.arguments;
+                final bool isFromStore = (args is Map && args['isFromStore'] == true);
+
+                if (isFromStore) {
+                   return _menuTile(
+                    icon: Icons.home,
+                    title: "Kembali ke Beranda Pembeli",
+                    iconColor: Colors.blue.shade800,
+                    onTap: () {
+                      // Clear stack and go to AuthWrapper (which returns Home) or pop until root
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                  );
                 }
 
                 if (hasStore) {
@@ -143,6 +168,21 @@ class AkunPage extends StatelessWidget {
 
             const SizedBox(height: 12),
 
+             _menuTile(
+              icon: Icons.support_agent,
+              title: "Layanan Aduan",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LayananAduanPage(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
             _menuTile(
               icon: Icons.logout,
               title: "Keluar",
@@ -163,6 +203,23 @@ class AkunPage extends StatelessWidget {
 
                 if (confirm) {
                   await authService.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(
+                          onSwitchToRegister: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      (route) => false,
+                    );
+                  }
                 }
               },
             ),

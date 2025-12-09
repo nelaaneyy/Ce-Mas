@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/config/firebase_options.dart';
-import 'core/widgets/auth_wrapper.dart';
+import 'core/auth/auth_wrapper.dart';
 import 'shared/pages/profile_page.dart';
 import 'shared/pages/tentang_kami.dart';
-import 'shared/pages/login_page.dart';
 import 'shared/pages/notifikasi_page.dart';
 import 'shared/pages/akun_page.dart';
 import 'features/user/pages/nilai_umkm_page.dart';
@@ -34,7 +33,7 @@ class MyApp extends StatelessWidget {
       routes: {
         "/profilePage": (context) => const ProfilePage(),
         "/tentangKami": (context) => const TentangKamiPage(),
-        "/login": (context) => const LoginPage(),
+        // "/login": (context) => const LoginPage(),
         "/notifikasiPage": (context) => const NotifikasiPage(),
         "/akunPage": (context) => const AkunPage(),
         "/nilai_umkm": (context) {

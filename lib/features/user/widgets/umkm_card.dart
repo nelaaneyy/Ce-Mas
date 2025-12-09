@@ -9,10 +9,12 @@ class UmkmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil data dari Firestore
-    String namaToko = sellerData['namaToko'] ?? 'Nama Toko';
-    String alamat = sellerData['alamat'] ?? 'Alamat';
-    String fotoToko = sellerData['fotoToko'] ?? ''; // URL foto
+    // Ambil data dari Firestore dengan aman
+    final data = sellerData.data() as Map<String, dynamic>;
+    String namaToko = data['namaToko'] ?? 'Nama Toko';
+    String alamat = data['alamat'] ?? 'Alamat';
+    // Fix field name match with SellerService (fotoUmkm instead of fotoToko)
+    String fotoToko = data['fotoUmkm'] ?? data['fotoToko'] ?? '';
 
     // Data Rating & Ulasan BELUM ADA di skema kita,
     // jadi kita hardcode dulu untuk UI

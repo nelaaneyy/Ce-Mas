@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class SellerService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -51,11 +52,23 @@ class SellerService {
       'createdAt': FieldValue.serverTimestamp(),
       'rating': 0.0,
       'jumlahUlasan': 0,
+      'status': 'Menunggu', // Default status for verification
     });
 
     await _firestore.collection('users').doc(user.uid).update({
       'role': 'penjual',
     });
+    
+    // Log Activity (New Feature)
+    try {
+       await _firestore.collection('activities').add({
+         'text': 'Pendaftaran UMKM Baru: $namaToko',
+         'type': 'warning', // Warning because needs verification
+         'timestamp': FieldValue.serverTimestamp(),
+       });
+    } catch (e) {
+      debugPrint("Log activity failed: $e");
+    }
   }
 
   // --- 3. AMBIL PRODUK SAYA (READ) ---
@@ -120,5 +133,69 @@ class SellerService {
     Map<String, dynamic> data,
   ) async {
     await _firestore.collection('products').doc(productId).update(data);
+  }
+  // --- 7. DASHBOARD STATS STREAM (REAL-TIME) ---
+  Stream<Map<String, dynamic>> getStoreStatsStream() {
+    User? user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value({'products': 0, 'rating': 0.0, 'chat': 0, 'views': 0});
+    }
+
+    late StreamController<Map<String, dynamic>> controller;
+    // ignore: cancel_subscriptions
+    var subs = <dynamic>[];
+    
+    // Initial values
+    int productCount = 0;
+    double rating = 0.0;
+    int chatCount = 0; // Placeholder until Chat feature is live
+    int views = 0; // Placeholder
+
+    void emitStats() {
+      if (!controller.isClosed) {
+        debugPrint("SellerStats: Emitting - Products: $productCount, Rating: $rating");
+        controller.add({
+          'products': productCount,
+          'rating': rating,
+          'chat': chatCount,
+          'views': views,
+        });
+      }
+    }
+
+    controller = StreamController<Map<String, dynamic>>(
+      onListen: () {
+        debugPrint("SellerStats: Stream Listen Started for ${user.uid}");
+        
+        // 1. Listen to Product Count
+        subs.add(_firestore.collection('products').where('sellerId', isEqualTo: user.uid).snapshots().listen((snapshot) {
+          productCount = snapshot.docs.length;
+          debugPrint("SellerStats: Products update. Count: $productCount");
+          emitStats();
+        }));
+
+        // 2. Listen to Seller Info for Rating & Views
+        subs.add(_firestore.collection('sellers').doc(user.uid).snapshots().listen((snapshot) {
+          if (snapshot.exists) {
+            final data = snapshot.data() as Map<String, dynamic>;
+            rating = (data['rating'] is num) ? (data['rating'] as num).toDouble() : 0.0;
+            debugPrint("SellerStats: Seller info update. Rating: $rating");
+            // views = data['views'] ?? 0;
+            emitStats();
+          }
+        }));
+
+        // Emission awal (penting agar tidak loading terus)
+        emitStats();
+      },
+      onCancel: () {
+         debugPrint("SellerStats: Stream Cancelled");
+        for (var sub in subs) {
+          sub.cancel();
+        }
+      },
+    );
+
+    return controller.stream;
   }
 }

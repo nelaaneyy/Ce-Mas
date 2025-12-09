@@ -17,53 +17,6 @@ class UmkmSearchResults extends StatefulWidget {
 }
 
 class _UmkmSearchResultsState extends State<UmkmSearchResults> {
-  late Future<List<DocumentSnapshot>> _searchResults;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchResults = _performSearch();
-  }
-
-  Future<List<DocumentSnapshot>> _performSearch() async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-
-      // Query sellers berdasarkan nama toko atau deskripsi yang mengandung search query
-      final query = firestore.collection('sellers');
-      final snapshot = await query.get();
-
-      List<DocumentSnapshot> results = [];
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final namaToko = (data['namaToko'] as String?)?.toLowerCase() ?? '';
-        final deskripsi = (data['deskripsi'] as String?)?.toLowerCase() ?? '';
-        final kategori = (data['kategori'] as String?)?.toLowerCase() ?? '';
-        final searchLower = widget.searchQuery.toLowerCase();
-
-        // Filter by search query
-        final matchesSearch =
-            namaToko.contains(searchLower) || deskripsi.contains(searchLower);
-
-        // Filter by kategori if specified
-        final matchesFilter =
-            widget.selectedFilter == null ||
-            widget.selectedFilter == 'Semua' ||
-            kategori == widget.selectedFilter?.toLowerCase();
-
-        if (matchesSearch && matchesFilter) {
-          results.add(doc);
-        }
-      }
-
-      return results;
-    } catch (e) {
-      debugPrint('Search error: $e');
-      rethrow;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,62 +30,45 @@ class _UmkmSearchResultsState extends State<UmkmSearchResults> {
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
-      body: FutureBuilder<List<DocumentSnapshot>>(
-        future: _searchResults,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('sellers').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => setState(() {
-                      _searchResults = _performSearch();
-                    }),
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
-              ),
-            );
+             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.search_off, size: 80, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tidak ada hasil untuk "${widget.searchQuery}"',
-                    style: const TextStyle(fontSize: 18, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (widget.selectedFilter != null &&
-                      widget.selectedFilter != 'Semua')
-                    Text(
-                      'Kategori: ${widget.selectedFilter}',
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  const SizedBox(height: 24),
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Kembali'),
-                  ),
-                ],
-              ),
-            );
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+             return _buildEmptyState();
           }
 
-          final results = snapshot.data!;
+          // Lakukan filtering di client-side agar realtime
+          // (Firestore tidak support partial text search native secara realtime dengan mudah)
+          final allDocs = snapshot.data!.docs;
+          final filteredDocs = allDocs.where((doc) {
+             final data = doc.data() as Map<String, dynamic>;
+             final namaToko = (data['namaToko'] as String?)?.toLowerCase() ?? '';
+             final deskripsi = (data['deskripsi'] as String?)?.toLowerCase() ?? '';
+             final kategori = (data['kategori'] as String?)?.toLowerCase() ?? '';
+             final searchLower = widget.searchQuery.toLowerCase();
+
+             // Filter by search query
+             final matchesSearch = namaToko.contains(searchLower) || deskripsi.contains(searchLower);
+
+             // Filter by kategori if specified
+             final matchesFilter = widget.selectedFilter == null ||
+                widget.selectedFilter == 'Semua' ||
+                kategori == widget.selectedFilter?.toLowerCase();
+             
+             return matchesSearch && matchesFilter;
+          }).toList();
+
+          if (filteredDocs.isEmpty) {
+            return _buildEmptyState();
+          }
 
           return GridView.builder(
             padding: const EdgeInsets.all(12),
@@ -142,13 +78,40 @@ class _UmkmSearchResultsState extends State<UmkmSearchResults> {
               mainAxisSpacing: 12,
               childAspectRatio: 0.75,
             ),
-            itemCount: results.length,
+            itemCount: filteredDocs.length,
             itemBuilder: (context, index) {
-              final item = results[index];
+              final item = filteredDocs[index];
               return _buildUmkmCard(item);
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.search_off, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada hasil untuk "${widget.searchQuery}"',
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          if (widget.selectedFilter != null && widget.selectedFilter != 'Semua')
+            Text(
+              'Kategori: ${widget.selectedFilter}',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          const SizedBox(height: 24),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kembali'),
+          ),
+        ],
       ),
     );
   }
@@ -159,7 +122,7 @@ class _UmkmSearchResultsState extends State<UmkmSearchResults> {
       'namaToko': data['namaToko'] ?? 'Toko Tanpa Nama',
       'deskripsi': data['deskripsi'] ?? '',
       'kategori': data['kategori'] ?? 'Umum',
-      'foto': data['foto'] ?? '',
+      'foto': data['fotoUmkm'] ?? data['fotoToko'] ?? '',
       'alamat': data['alamat'] ?? '',
       'noWhatsapp': data['noWhatsapp'] ?? '',
     };

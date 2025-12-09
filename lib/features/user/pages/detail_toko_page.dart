@@ -412,9 +412,11 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
                 data['namaToko'],
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
-              background: (data['fotoToko'] != null && data['fotoToko'] != '')
-                  ? Image.network(data['fotoToko'], fit: BoxFit.cover)
-                  : Container(
+              background: (data['fotoUmkm'] != null && data['fotoUmkm'] != '')
+                  ? Image.network(data['fotoUmkm'], fit: BoxFit.cover)
+                  : (data['fotoToko'] != null && data['fotoToko'] != '')
+                      ? Image.network(data['fotoToko'], fit: BoxFit.cover)
+                      : Container(
                       color: Colors.blue.shade800,
                       child: const Icon(
                         Icons.store,
@@ -440,16 +442,6 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
                         labelStyle: TextStyle(color: Colors.blue.shade800),
                       ),
                       const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.chat, color: Colors.green),
-                        onPressed: () {
-                          _launchWA(
-                            data['noWhatsapp'],
-                            "Halo ${data['namaToko']}, saya mau tanya stok...",
-                          );
-                        },
-                        tooltip: "Chat Penjual",
-                      ),
                     ],
                   ),
                   const SizedBox(height: 10),

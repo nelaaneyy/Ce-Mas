@@ -100,9 +100,11 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
         _data.email,
         _data.password,
         _data.namaPemilik,
-        "",
-        _data.username,
-        _data.noHp,
+        // Pass optional params
+        namaTerakhir: "", // Using empty string as per original intent
+        username: _data.username,
+        nomorHp: _data.noHp,
+        role: 'umkm', // Explicity set role to UMKM since this is UMKM registration area
       );
 
       // 2. Cek Langsung ke Firebase Auth

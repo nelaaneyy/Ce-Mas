@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cemas/core/services/auth_service.dart'; // Pastikan file ini ada
+import 'package:cemas/core/auth/auth_wrapper.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback? onSwitchToRegister; // Untuk pindah ke halaman Sign Up
@@ -27,10 +28,18 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      await _authService.signInWithEmailPassword(
+        await _authService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
+      
+      if (mounted) {
+         // Essential: Restart app flow from AuthWrapper
+         Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AuthWrapper()),
+            (route) => false,
+         );
+      }
     } on FirebaseAuthException catch (e) {
       // Tampilkan pesan yang lebih jelas untuk kode error umum
       String message;
@@ -64,10 +73,16 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Success check: If not loading (finished) and no error handling caught it?
+      // Actually, catch blocks handle error. If we are here and _isLoading is still true (or we set it false), 
+      // we need to know if success.
+      // Better: put nav inside try block after await.
     }
+    
+    // NOTE: This logic was refactored below to be inside the Try block for robustness.
+    setState(() {
+       _isLoading = false;
+    });
   }
 
   void _loginWithGoogle() async {
@@ -77,6 +92,12 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await _authService.signInWithGoogle();
+      if (mounted) {
+         Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AuthWrapper()),
+            (route) => false,
+         );
+      }
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'ERROR_ABORTED_BY_USER') {
