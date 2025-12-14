@@ -16,22 +16,20 @@ class UmkmCard extends StatelessWidget {
     // Fix field name match with SellerService (fotoUmkm instead of fotoToko)
     String fotoToko = data['fotoUmkm'] ?? data['fotoToko'] ?? '';
 
-    // Data Rating & Ulasan BELUM ADA di skema kita,
-    // jadi kita hardcode dulu untuk UI
-    String rating = "4.8";
-    String ulasan = "(10 ulasan)";
-    
+    // Get Real-Time Rating Data
+    final num ratingNum = data['rating'] ?? 0;
+    final double rating = ratingNum.toDouble();
+    final int ulasan = data['jumlahUlasan'] ?? 0;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: InkWell( // TAMBAHAN: Agar kartu bisa diklik
-        borderRadius: BorderRadius.circular(10), // Agar efek klik mengikuti bentuk kartu
+      child: InkWell( 
+        borderRadius: BorderRadius.circular(10), 
         onTap: () {
-          // --- NAVIGASI KE DETAIL TOKO ---
           Navigator.push(
             context,
             MaterialPageRoute(
-              // Kita kirim data 'sellerData' ini ke halaman detail
               builder: (context) => DetailTokoPage(sellerData: sellerData),
             ),
           );
@@ -41,7 +39,6 @@ class UmkmCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-              // Tampilkan fotoToko jika ada, jika tidak, tampilkan placeholder
               child: (fotoToko.isNotEmpty)
                   ? Image.network(
                       fotoToko,
@@ -70,9 +67,36 @@ class UmkmCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                      Text(" $rating", style: const TextStyle(fontSize: 12)),
-                      Text(" $ulasan", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      // RATING LOGIC
+                      if (rating > 0) ...[
+                        const Icon(Icons.star_rounded, color: Color(0xFFFFA000), size: 18), // Amber[700]
+                        const SizedBox(width: 4),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          " ($ulasan ulasan)",
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Text(
+                            "Baru",
+                            style: TextStyle(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),

@@ -1,12 +1,14 @@
-// ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
+// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cemas/core/services/auth_service.dart'; // Pastikan file ini ada
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cemas/core/services/auth_service.dart';
+import 'package:cemas/core/utils/auth_error_mapper.dart';
 import 'package:cemas/core/auth/auth_wrapper.dart';
 
 class LoginPage extends StatefulWidget {
-  final VoidCallback? onSwitchToRegister; // Untuk pindah ke halaman Sign Up
+  final VoidCallback? onSwitchToRegister;
 
   const LoginPage({super.key, this.onSwitchToRegister});
 
@@ -16,254 +18,324 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final AuthService _authService = AuthService();
+  final _formKey = GlobalKey<FormState>();
+  
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _passwordController = TextEditingController(); // Consider disposing these
+  
   bool _isLoading = false;
-  bool _rememberMe = false; // State untuk "Remember me"
+  bool _isObscure = true; // Password visibility state
+  bool _rememberMe = false;
 
-  // Fungsi login
-  void _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // --- VALIDATORS ---
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    // Strict Gmail Regex
+    final gmailRegex = RegExp(r'^[a-zA-Z0-9.]+@gmail\.com$');
+    if (!gmailRegex.hasMatch(value)) {
+      return 'Only @gmail.com addresses are allowed.';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    return null;
+  }
+
+  // --- ACTIONS ---
+  Future<void> _login() async {
+    // 1. Strict Form Validation
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     try {
-        await _authService.signInWithEmailPassword(
+      await _authService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
       if (mounted) {
-         // Essential: Restart app flow from AuthWrapper
-         Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthWrapper()),
-            (route) => false,
-         );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
+          (route) => false,
+        );
       }
-    } on FirebaseAuthException catch (e) {
-      // Tampilkan pesan yang lebih jelas untuk kode error umum
-      String message;
-      switch (e.code) {
-        case 'invalid-email':
-          message = 'Format email tidak valid.';
-          break;
-        case 'user-disabled':
-          message = 'Akun dinonaktifkan.';
-          break;
-        case 'user-not-found':
-          message = 'Email belum terdaftar.';
-          break;
-        case 'wrong-password':
-          message = 'Password salah.';
-          break;
-        case 'invalid-credential':
-          message = 'Kredensial tidak valid atau kadaluarsa.';
-          break;
-        default:
-          message = e.message ?? 'Terjadi kesalahan saat login.';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login Gagal: $message (${e.code})')),
-      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login Gagal: ${e.toString()}')));
+      _showErrorSnackBar(AuthErrorMapper.getFriendlyErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted) {
-      // Success check: If not loading (finished) and no error handling caught it?
-      // Actually, catch blocks handle error. If we are here and _isLoading is still true (or we set it false), 
-      // we need to know if success.
-      // Better: put nav inside try block after await.
-    }
-    
-    // NOTE: This logic was refactored below to be inside the Try block for robustness.
-    setState(() {
-       _isLoading = false;
-    });
   }
 
-  void _loginWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
     try {
       await _authService.signInWithGoogle();
       if (mounted) {
-         Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthWrapper()),
-            (route) => false,
-         );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
+          (route) => false,
+        );
       }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'ERROR_ABORTED_BY_USER') {
-        message = 'Login dibatalkan oleh pengguna.';
-      } else if (e.code == 'invalid-credential') {
-        message = 'Kredensial Google tidak valid atau kadaluarsa.';
-      } else {
-        message = e.message ?? 'Terjadi kesalahan saat login dengan Google.';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In Gagal: $message (${e.code})')),
-      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In Gagal: ${e.toString()}')),
-      );
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (e is FirebaseAuthException && e.code == 'ERROR_ABORTED_BY_USER') return;
+      _showErrorSnackBar(AuthErrorMapper.getFriendlyErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- UI WIDGET UTAMA ---
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  // --- UI BUILDER ---
   @override
   Widget build(BuildContext context) {
-    // Kita pakai MediaQuery untuk tahu ukuran layar
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      // Warna latar belakang biru untuk bagian atas
-      backgroundColor: Colors.blue.shade800,
+      backgroundColor: Colors.blue.shade900, // Deep Blue Background
       body: Stack(
         children: [
-          // WADAH KONTEN PUTIH (FORM)
+          // Background Gradient or Pattern (Optional, keeping simple blue as base)
+          
+          // White Container
           Positioned(
-            // Mulai 25% dari atas layar
-            top: screenSize.height * 0.25,
+            top: screenSize.height * 0.22,
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                // Sudut melengkung HANYA di kiri atas dan kanan atas
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 20,
+                    offset: Offset(0, -5),
+                  )
+                ],
               ),
-              // Kita pakai SingleChildScrollView di DALAM sini
-              // agar form-nya bisa di-scroll jika keyboard muncul
               child: SingleChildScrollView(
-                // Beri padding atas agar form tidak tertutup logo
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // --- Judul dan Link Sign Up ---
-                    const Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
+                padding: const EdgeInsets.fromLTRB(28, 70, 28, 28),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Welcome Back',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        GestureDetector(
-                          onTap: widget
-                              .onSwitchToRegister, // Panggil fungsi pindah
-                          child: Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              color: Colors.blue.shade800,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Please sign in to continue',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Email Field
+                      _buildLabel('Email Address'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _emailController,
+                        validator: _validateEmail,
+                        keyboardType: TextInputType.emailAddress,
+                        style: GoogleFonts.poppins(),
+                        decoration: _buildInputDecoration(
+                          hint: 'example@gmail.com',
+                          prefixIcon: Icons.email_outlined,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Password Field
+                      _buildLabel('Password'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _passwordController,
+                        validator: _validatePassword,
+                        obscureText: _isObscure,
+                        style: GoogleFonts.poppins(),
+                        decoration: _buildInputDecoration(
+                          hint: '••••••••',
+                          prefixIcon: Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: Colors.grey.shade600,
                             ),
+                            onPressed: () {
+                              setState(() => _isObscure = !_isObscure);
+                            },
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-
-                    // --- Form Input Kustom ---
-                    _buildCustomTextField(
-                      label: 'Email',
-                      controller: _emailController,
-                      isEmail: true,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildCustomTextField(
-                      label: 'Password',
-                      controller: _passwordController,
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // --- Baris Remember Me & Forgot ---
-                    _buildRememberMeRow(),
-                    const SizedBox(height: 20),
-
-                    // --- Tombol Log In ---
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade800,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Log In',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
+                      
+                      // Remember Me & Forgot Password
+                      // Remember Me
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Transform.scale(
+                                scale: 0.9,
+                                child: Checkbox(
+                                  value: _rememberMe,
+                                  activeColor: Colors.blue.shade800,
+                                  onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                ),
+                              ),
+                              Text(
+                                'Remember me',
+                                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade700),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: widget.onSwitchToRegister,
+                            child: Text(
+                              'Sign Up',
+                              style: GoogleFonts.poppins(
+                                color: Colors.blue.shade900,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
-                    ),
-                    const SizedBox(height: 25),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
 
-                    // --- Pemisah "Or" ---
-                    _buildOrDivider(),
-                    const SizedBox(height: 25),
+                      // Login Button
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade900,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                          shadowColor: Colors.blue.shade900.withOpacity(0.4),
+                        ),
+                        child: _isLoading 
+                          ? const SizedBox(
+                              height: 24, 
+                              width: 24, 
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                            )
+                          : Text(
+                              'Log In',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                      ),
 
-                    // --- Tombol Social Login ---
-                    _buildSocialButton(
-                      label: 'Continue with Google',
-                      iconAsset: 'assets/images/logogoogle.png',
-                      onPressed: _isLoading ? () {} : _loginWithGoogle,
-                    ),
-                    const SizedBox(height: 15),
-                    _buildSocialButton(
-                      label: 'Continue with Facebook',
-                      iconAsset: 'assets/images/logofacebook.png',
-                      onPressed: () {},
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Or continue with',
+                              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade500),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Google Button (Specific Request)
+                      _buildGoogleButton(),
+
+                      const SizedBox(height: 24),
+                      
+
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
 
-          // --- LOGO (DI ATAS SEMUANYA) ---
+          // Logo Positioned
           Positioned(
-            // (Posisi top Container putih) - (Setengah tinggi logo)
-            top: (screenSize.height * 0.125) - 50,
-            // (Setengah lebar layar) - (Setengah lebar logo)
-            left: (screenSize.width / 2) - 50,
-
-            // --- INI BAGIAN YANG DIUBAH ---
-            child: Container(
-              width: 100, // Atur lebar logo
-              height: 100, // Atur tinggi logo
-              child: Image.asset(
-                'assets/images/logocemas.jpeg',
-                fit: BoxFit.contain, // Agar gambar pas
+            top: (screenSize.height * 0.22) - 50,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(12),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/logocemas.jpeg',
+                    fit: BoxFit.contain,
+                    errorBuilder: (c, o, s) => Icon(Icons.store, size: 40, color: Colors.blue.shade800),
+                  ),
+                ),
               ),
             ),
           ),
@@ -272,120 +344,83 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildCustomTextField({
-    required String label,
-    required TextEditingController controller,
-    bool isPassword = false,
-    bool isEmail = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          keyboardType: isEmail
-              ? TextInputType.emailAddress
-              : TextInputType.text,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Colors.grey),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.blue.shade800),
-            ),
-            suffixIcon: isPassword
-                ? const Icon(Icons.visibility_off_outlined)
-                : null,
-          ),
-        ),
-      ],
+  // --- HELPERS ---
+
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.poppins(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey.shade800,
+      ),
     );
   }
 
-  Widget _buildRememberMeRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Checkbox(
-                value: _rememberMe,
-                onChanged: (value) {
-                  setState(() {
-                    _rememberMe = value ?? false;
-                  });
-                },
-              ),
+  InputDecoration _buildInputDecoration({required String hint, required IconData prefixIcon}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(prefixIcon, color: Colors.grey.shade500),
+      filled: true,
+      fillColor: Colors.grey.shade100, // Light grey fill
+      hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none, // Remove default border for cleaner look with fill
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200), // Subtle border when enabled
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.blue.shade800, width: 2), // Highlight on focus
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return ElevatedButton(
+      onPressed: _isLoading ? null : _loginWithGoogle,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 2,
+        shadowColor: Colors.grey.withOpacity(0.2),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // If asset exists, show it, otherwise icon
+          Image.asset(
+            'assets/images/logogoogle.png',
+            height: 24,
+            width: 24,
+            errorBuilder: (c,e,s) => const Icon(Icons.g_mobiledata, size: 28, color: Colors.blue),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Continue with Google',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(width: 8),
-            const Text('Remember me'),
-          ],
-        ),
-        TextButton(
-          onPressed: () {},
-          child: Text(
-            'Forgot Password?',
-            style: TextStyle(color: Colors.blue.shade800),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOrDivider() {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: Color.fromARGB(255, 202, 202, 202))),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Or',
-            style: TextStyle(color: Color.fromARGB(137, 37, 37, 37)),
-          ),
-        ),
-        Expanded(child: Divider(color: Color.fromARGB(255, 202, 202, 202))),
-      ],
-    );
-  }
-
-  Widget _buildSocialButton({
-    required String label,
-    required String iconAsset,
-    required VoidCallback onPressed,
-  }) {
-    // Pastikan aset sosial media ada, jika tidak, tampilkan tanpa ikon
-    // Ini adalah cara aman agar tidak error jika logo google/fb belum ada
-    Widget iconWidget;
-    try {
-      iconWidget = Image.asset(iconAsset, height: 20, width: 20);
-    } catch (e) {
-      iconWidget = const SizedBox(width: 0); // Tampilkan box kosong
-    }
-
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: iconWidget,
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.black, // Warna teks
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        side: const BorderSide(color: Color.fromARGB(255, 218, 218, 218)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
 // Import service
 // Pastikan path ini benar. '..' artinya naik satu folder ke 'lib/'
@@ -12,7 +13,7 @@ import 'package:cemas/features/umkm/services/seller_service.dart';
 
 // Import model dan steps
 import 'package:cemas/features/umkm/models/registration_model.dart';
-import 'package:cemas/features/umkm/pages/registration/step_akun.dart';
+// import 'package:cemas/features/umkm/pages/registration/step_akun.dart'; // REMOVED
 import 'package:cemas/features/umkm/pages/registration/step_pemilik.dart';
 import 'package:cemas/features/umkm/pages/registration/step_umkm.dart';
 import 'package:cemas/features/umkm/pages/registration/step_kontak.dart';
@@ -48,7 +49,8 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
 
   // --- FUNGSI NAVIGASI ---
   void _nextPage() {
-    if (_currentStep < 4) {
+    // Reduced max steps from 4 to 3 (0: Pemilik, 1: UMKM, 2: Kontak, 3: Review)
+    if (_currentStep < 3) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -95,28 +97,17 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
     );
 
     try {
-      // 1. Buat Akun User
-      setState(() => _progressMessage = 'Membuat akun...');
-      await _authService.signUpWithEmailPassword(
-        _data.email,
-        _data.password,
-        _data.namaPemilik,
-        // Pass optional params
-        namaTerakhir: "", // Using empty string as per original intent
-        username: _data.username,
-        nomorHp: _data.noHp,
-        role: 'umkm', // Explicity set role to UMKM since this is UMKM registration area
-      );
-
-      // 2. Cek Langsung ke Firebase Auth
+      // 1. Verifikasi Login (Pengganti Buat Akun)
+      setState(() => _progressMessage = 'Memverifikasi akun...');
+      
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        throw Exception("Gagal membuat akun. Email mungkin sudah terdaftar.");
+        throw Exception("Anda harus login terlebih dahulu untuk mendaftar UMKM.");
       }
-
+      
       final uid = currentUser.uid;
 
-      // 3. Upload Foto KTP dan UMKM SECARA PARALEL (LEBIH CEPAT!)
+      // 2. Upload Foto KTP dan UMKM SECARA PARALEL (LEBIH CEPAT!)
       setState(() => _progressMessage = 'Mengupload foto...');
       
       final results = await Future.wait([
@@ -127,7 +118,15 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
       String? fotoKtpUrl = results[0];
       String? fotoUmkmUrl = results[1];
 
-      // 4. Buat Toko
+      // CRITICAL: Check if uploads failed
+      if (_data.fotoKtpPath != null && _data.fotoKtpPath!.isNotEmpty && fotoKtpUrl == null) {
+        throw Exception("Gagal mengupload Foto KTP. Periksa koneksi internet Anda.");
+      }
+      if (_data.fotoUmkmPath != null && _data.fotoUmkmPath!.isNotEmpty && fotoUmkmUrl == null) {
+         throw Exception("Gagal mengupload Foto UMKM. Periksa koneksi internet Anda.");
+      }
+
+      // 3. Buat Toko
       setState(() => _progressMessage = 'Menyimpan data toko...');
       await _sellerService.createStore(
         namaToko: _data.namaUmkm,
@@ -137,6 +136,13 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
         kategori: _data.kategori,
         fotoKtpUrl: fotoKtpUrl,
         fotoUmkmUrl: fotoUmkmUrl,
+        
+        // Pass missing fields
+        nik: _data.nik,
+        namaPemilik: _data.namaPemilik,
+        instagram: _data.instagram,
+        facebook: _data.facebook,
+        tiktok: _data.tiktok,
       );
 
       if (mounted) {
@@ -153,96 +159,108 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
     }
   }
 
-  // --- FUNGSI UPLOAD FOTO KTP (DENGAN KOMPRESI) ---
+  // --- FUNGSI UPLOAD FOTO KTP (ROBUST: COMPRESS -> FALLBACK ORIGINAL) ---
   Future<String?> _uploadKtpPhoto(String uid) async {
     if (_data.fotoKtpPath == null || _data.fotoKtpPath!.isEmpty) {
       return null;
     }
 
+    Uint8List? uploadData;
+    
+    // 1. Coba Kompresi (Quality lowered to 50 for speed)
     try {
-      // Kompres gambar sebelum upload untuk mempercepat proses
       final compressedBytes = await FlutterImageCompress.compressWithFile(
         _data.fotoKtpPath!,
-        quality: 70, // Kualitas 70% (balance antara ukuran dan kualitas)
+        quality: 50,
         format: CompressFormat.jpeg,
       );
-      
-      if (compressedBytes == null || compressedBytes.isEmpty) {
-        debugPrint("Warning: Kompresi KTP gagal, menggunakan file asli");
-        final ktpBytes = await XFile(_data.fotoKtpPath!).readAsBytes();
-        if (ktpBytes.isEmpty) return null;
-        
-        final storageRef = FirebaseStorage.instance.ref().child(
-          "seller_ktp/$uid.jpg",
-        );
-        await storageRef.putData(
-          ktpBytes,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        final url = await storageRef.getDownloadURL();
-        debugPrint("KTP foto uploaded (original): $url");
-        return url;
+      if (compressedBytes != null && compressedBytes.isNotEmpty) {
+        uploadData = compressedBytes;
+        debugPrint("KTP: Kompresi sukses.");
       }
+    } catch (e) {
+      debugPrint("KTP: Kompresi error ($e). Lanjut ke file asli.");
+    }
 
-      final storageRef = FirebaseStorage.instance.ref().child(
-        "seller_ktp/$uid.jpg",
-      );
+    // 2. Fallback ke File Asli
+    if (uploadData == null) {
+      try {
+        uploadData = await XFile(_data.fotoKtpPath!).readAsBytes();
+        debugPrint("KTP: Menggunakan file asli.");
+      } catch (e) {
+        debugPrint("KTP: Gagal baca file asli: $e");
+        return null;
+      }
+    }
+
+    if (uploadData.isEmpty) return null;
+
+    // 3. Upload ke Firebase Storage (Timeout 45s)
+    try {
+      final storageRef = FirebaseStorage.instance.ref().child("seller_ktp/$uid.jpg");
       await storageRef.putData(
-        compressedBytes,
+        uploadData,
         SettableMetadata(contentType: 'image/jpeg'),
-      );
+      ).timeout(const Duration(seconds: 45)); // Add Timeout
+      
       final url = await storageRef.getDownloadURL();
-      debugPrint("KTP foto uploaded (compressed): $url");
+      debugPrint("KTP: Upload sukses: $url");
       return url;
     } catch (e) {
-      debugPrint("Warning: Gagal upload KTP: $e");
+      debugPrint("KTP: Gagal upload ke Storage: $e");
       return null;
     }
   }
 
-  // --- FUNGSI UPLOAD FOTO UMKM (DENGAN KOMPRESI) ---
+  // --- FUNGSI UPLOAD FOTO UMKM (ROBUST: COMPRESS -> FALLBACK ORIGINAL) ---
   Future<String?> _uploadUmkmPhoto(String uid) async {
     if (_data.fotoUmkmPath == null || _data.fotoUmkmPath!.isEmpty) {
       return null;
     }
 
+    Uint8List? uploadData;
+    
+    // 1. Coba Kompresi
     try {
-      // Kompres gambar sebelum upload untuk mempercepat proses
       final compressedBytes = await FlutterImageCompress.compressWithFile(
         _data.fotoUmkmPath!,
-        quality: 70, // Kualitas 70% (balance antara ukuran dan kualitas)
+        quality: 50,
         format: CompressFormat.jpeg,
       );
-      
-      if (compressedBytes == null || compressedBytes.isEmpty) {
-        debugPrint("Warning: Kompresi UMKM gagal, menggunakan file asli");
-        final umkmBytes = await XFile(_data.fotoUmkmPath!).readAsBytes();
-        if (umkmBytes.isEmpty) return null;
-        
-        final storageRef = FirebaseStorage.instance.ref().child(
-          "seller_umkm/$uid.jpg",
-        );
-        await storageRef.putData(
-          umkmBytes,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        final url = await storageRef.getDownloadURL();
-        debugPrint("UMKM foto uploaded (original): $url");
-        return url;
+      if (compressedBytes != null && compressedBytes.isNotEmpty) {
+        uploadData = compressedBytes;
+        debugPrint("UMKM: Kompresi sukses.");
       }
+    } catch (e) {
+      debugPrint("UMKM: Kompresi error ($e). Lanjut ke file asli.");
+    }
 
-      final storageRef = FirebaseStorage.instance.ref().child(
-        "seller_umkm/$uid.jpg",
-      );
+    // 2. Fallback ke File Asli
+    if (uploadData == null) {
+      try {
+        uploadData = await XFile(_data.fotoUmkmPath!).readAsBytes();
+        debugPrint("UMKM: Menggunakan file asli.");
+      } catch (e) {
+        debugPrint("UMKM: Gagal baca file asli: $e");
+        return null;
+      }
+    }
+
+    if (uploadData.isEmpty) return null;
+
+    // 3. Upload ke Firebase Storage (Timeout 45s)
+    try {
+      final storageRef = FirebaseStorage.instance.ref().child("seller_umkm/$uid.jpg");
       await storageRef.putData(
-        compressedBytes,
+        uploadData,
         SettableMetadata(contentType: 'image/jpeg'),
-      );
+      ).timeout(const Duration(seconds: 45)); // Add Timeout
+      
       final url = await storageRef.getDownloadURL();
-      debugPrint("UMKM foto uploaded (compressed): $url");
+      debugPrint("UMKM: Upload sukses: $url");
       return url;
     } catch (e) {
-      debugPrint("Warning: Gagal upload UMKM: $e");
+      debugPrint("UMKM: Gagal upload ke Storage: $e");
       return null;
     }
   }
@@ -366,15 +384,10 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        StepAkun(
-                          data: _data,
-                          onNext: _nextPage,
-                          onBack: widget.showBackButton ? _prevPage : null,
-                        ),
                         StepPemilik(
                           data: _data,
                           onNext: _nextPage,
-                          onBack: _prevPage,
+                          onBack: widget.showBackButton ? _prevPage : _prevPage, // First step logic adapted
                         ),
                         StepUMKM(
                           data: _data,
@@ -406,7 +419,8 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
   }
 
   Widget _buildStepIndicator() {
-    final steps = ['Akun', 'Pemilik', 'UMKM', 'Kontak', 'Review'];
+    // Removed 'Akun'
+    final steps = ['Pemilik', 'UMKM', 'Kontak', 'Review'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(

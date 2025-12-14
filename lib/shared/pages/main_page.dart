@@ -57,45 +57,20 @@ class _MainPageState extends State<MainPage> {
           );
         }
 
-        String role = 'pembeli';
-        if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          role = data['role'] ?? 'pembeli';
-        }
+        // Always show Buyer Tabs by default
+        List<Widget> currentPages = [
+          BerandaPage(onTabJump: _jumpToTab),
+          const UmkmPage(),
+          const NotifikasiPage(),
+          AkunPage(onBackToHome: () => _jumpToTab(0)),
+        ];
 
-        List<Widget> currentPages;
-        List<BottomNavigationBarItem> currentNavItems;
-
-        if (role == 'penjual') {
-          currentPages = [
-            const DashboardTokoPage(),
-            const KelolaTokoPage(),
-            const NotifikasiPage(),
-            const AkunPage(),
-          ];
-
-          currentNavItems = const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Beranda'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Produk'),
-            BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notifikasi'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Akun'),
-          ];
-        } else {
-          currentPages = [
-            BerandaPage(onTabJump: _jumpToTab),
-            const UmkmPage(),
-            const NotifikasiPage(),
-            const AkunPage(),
-          ];
-
-          currentNavItems = const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
-            BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), label: 'UMKM'),
-            BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notifikasi'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Akun'),
-          ];
-        }
-
+        List<BottomNavigationBarItem> currentNavItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
+          BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), label: 'UMKM'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notifikasi'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Akun'),
+        ];
         if (_selectedIndex >= currentPages.length) {
           _selectedIndex = 0;
         }

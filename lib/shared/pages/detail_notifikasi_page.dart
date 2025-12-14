@@ -4,18 +4,20 @@ class DetailNotifikasiPage extends StatelessWidget {
   final String waktu;
   final String pesan;
   final String umkmNama;
+  final String? deskripsi;
 
   const DetailNotifikasiPage({
     super.key,
     required this.waktu,
     required this.pesan,
     required this.umkmNama,
+    this.deskripsi,
   });
 
   @override
   Widget build(BuildContext context) {
     // --- VARIABEL DINAMIS ---
-    String deskripsi = "";
+    String deskripsiText = deskripsi ?? ""; // Use provided description if available
     String button1 = "";
     String button2 = "";
     VoidCallback? onButton1;
@@ -23,7 +25,7 @@ class DetailNotifikasiPage extends StatelessWidget {
 
     // --- LOGIKA NOTIFIKASI BERDASARKAN JUDUL ---
     if (pesan == "Beri ulasan terhadap UMKM!") {
-      deskripsi = "Anda baru saja melakukan transaksi di UMKM $umkmNama. "
+      deskripsiText = "Anda baru saja melakukan transaksi di UMKM $umkmNama. "
                   "Bantu UMKM berkembang dengan memberikan ulasan Anda.";
 
       button1 = "Nilai UMKM";
@@ -43,7 +45,7 @@ class DetailNotifikasiPage extends StatelessWidget {
     }
 
     else if (pesan == "Pembaruan sistem tersedia!") {
-      deskripsi =
+      deskripsiText =
           "Versi terbaru aplikasi telah tersedia. "
           "Perbarui sekarang untuk mendapatkan fitur terbaru.";
 
@@ -61,7 +63,7 @@ class DetailNotifikasiPage extends StatelessWidget {
     }
 
     else if (pesan == "UMKM baru tersedia!") {
-      deskripsi =
+      deskripsiText =
           "UMKM baru bernama $umkmNama kini tersedia di aplikasi. "
           "Yuk lihat profil dan dukung UMKM lokal!";
 
@@ -110,7 +112,7 @@ class DetailNotifikasiPage extends StatelessWidget {
 
             // Deskripsi dinamis
             Text(
-              deskripsi,
+              deskripsiText,
               style: const TextStyle(fontSize: 15),
             ),
 

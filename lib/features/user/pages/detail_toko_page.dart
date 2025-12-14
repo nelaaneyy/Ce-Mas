@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cemas/features/umkm/services/seller_service.dart';
 
 class DetailTokoPage extends StatefulWidget {
   final DocumentSnapshot
@@ -14,6 +15,17 @@ class DetailTokoPage extends StatefulWidget {
 }
 
 class _DetailTokoPageState extends State<DetailTokoPage> {
+  // Service Instance
+  final SellerService _sellerService = SellerService();  
+
+  @override
+  void initState() {
+    super.initState();
+    // Record View (Uniqueness handled in Service)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+       _sellerService.incrementStoreView(widget.sellerData.id);
+    });
+  }
   // Fungsi untuk membuka WhatsApp
   Future<void> _launchWA(String number, String message) async {
     // Format nomor (ganti 0 di depan dengan 62)
@@ -33,8 +45,9 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
   }
 
   Widget _buildRatingSection(Map<String, dynamic> sellerData) {
-    final rating = (sellerData['rating'] as num?)?.toDouble() ?? 0.0;
-    final reviewCount = sellerData['jumlahUlasan'] ?? 0;
+    final num ratingNum = sellerData['rating'] ?? 0;
+    final double rating = ratingNum.toDouble();
+    final int reviewCount = sellerData['jumlahUlasan'] ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,68 +58,105 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
         ),
         const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Rating Display
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+            if (rating > 0) ...[
+              Text(
+                rating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                    children: List.generate(
+                      5,
+                      (index) => Icon(
+                        index < rating.floor()
+                            ? Icons.star_rounded
+                            : (index < rating
+                                ? Icons.star_half_rounded
+                                : Icons.star_outline_rounded),
+                        color: const Color(0xFFFFA000), // Amber 700
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            ...List.generate(
-                              5,
-                              (index) => Icon(
-                                index < rating.toInt()
-                                    ? Icons.star
-                                    : (index < rating
-                                          ? Icons.star_half
-                                          : Icons.star_outline),
-                                color: Colors.amber,
-                                size: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "$reviewCount ulasan",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "($reviewCount ulasan)",
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              // New Shop Badge (Large)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      "Toko Baru",
+                      style: TextStyle(
+                        fontSize: 16, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700
+                      ),
+                    ),
+                    const Text(
+                      "Belum ada ulasan",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
+
             const Spacer(),
+            
             // Add Review Button
-            ElevatedButton.icon(
-              onPressed: () => _showAddReviewDialog(sellerData),
-              icon: const Icon(Icons.star_border),
-              label: const Text("Beri Ulasan"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade800,
-                foregroundColor: Colors.white,
+            InkWell(
+              onTap: () => _showAddReviewDialog(sellerData),
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18, color: Colors.blue.shade800),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Tulis Ulasan",
+                      style: TextStyle(
+                        color: Colors.blue.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         // Reviews List
         _buildReviewsList(sellerData['sellerId'] ?? ''),
       ],
@@ -304,62 +354,81 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text("Batal"),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final comment = commentController.text.trim();
-              if (comment.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Komentar tidak boleh kosong")),
-                );
-                return;
-              }
-
-              try {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user == null) {
+            ElevatedButton(
+              onPressed: () async {
+                final comment = commentController.text.trim();
+                // Validasi input
+                if (comment.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Silakan login terlebih dahulu"),
-                    ),
+                    const SnackBar(content: Text("Komentar tidak boleh kosong")),
                   );
                   return;
                 }
 
-                // Add review to seller's subcollection
-                await FirebaseFirestore.instance
-                    .collection('sellers')
-                    .doc(sellerId)
-                    .collection('reviews')
-                    .add({
-                      'rating': ratingNotifier.value,
-                      'comment': comment,
-                      'userName': user.displayName ?? 'Pengguna',
-                      'userId': user.uid,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
+                try {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Silakan login terlebih dahulu")),
+                    );
+                    return;
+                  }
 
-                // Update seller rating summary
-                _updateSellerRating(sellerId);
+                  // 1. Simpan Ulasan ke Sub-Collection
+                  await FirebaseFirestore.instance
+                      .collection('sellers')
+                      .doc(sellerId)
+                      .collection('reviews')
+                      .add({
+                        'rating': ratingNotifier.value,
+                        'comment': comment,
+                        'userName': user.displayName ?? 'Pengguna',
+                        'userId': user.uid,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
 
-                if (mounted) {
-                  Navigator.pop(ctx);
+                  // 2. Update Rata-rata Rating (Best Effort)
+                  // Kita pisahkan try-catch agar jika ini gagal (misal masalah izin),
+                  // ulasan tetap dianggap berhasil terkirim.
+                  try {
+                    await _updateSellerRating(sellerId);
+                  } catch (e) {
+                    debugPrint("Gagal update rata-rata rating: $e");
+                  }
+
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text("Ulasan berhasil dikirim!"),
+                        backgroundColor: Colors.green.shade700,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Error saat simpan ulasan
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Ulasan berhasil ditambahkan"),
+                    SnackBar(
+                      content: Text("Gagal mengirim ulasan: $e"),
+                      backgroundColor: Colors.red.shade700,
                     ),
                   );
                 }
-              } catch (e) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text("Error: $e")));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade800,
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade800,
+                foregroundColor: Colors.white, // Text White
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 2,
+              ),
+              child: const Text(
+                "Kirim",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
-            child: const Text("Kirim"),
-          ),
         ],
       ),
     );
@@ -393,137 +462,146 @@ class _DetailTokoPageState extends State<DetailTokoPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil data dari widget
-    var data = widget.sellerData.data() as Map<String, dynamic>;
-    String sellerId = widget.sellerData.id; // ID Toko untuk ambil produk
+    String sellerId = widget.sellerData.id; 
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          // --- 1. HEADER GAMBAR TOKO ---
-          SliverAppBar(
-            expandedHeight: 200.0,
-            pinned: true,
-            backgroundColor: Colors.blue.shade800,
-            iconTheme: const IconThemeData(color: Colors.white),
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                data['namaToko'],
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              background: (data['fotoUmkm'] != null && data['fotoUmkm'] != '')
-                  ? Image.network(data['fotoUmkm'], fit: BoxFit.cover)
-                  : (data['fotoToko'] != null && data['fotoToko'] != '')
-                      ? Image.network(data['fotoToko'], fit: BoxFit.cover)
-                      : Container(
-                      color: Colors.blue.shade800,
-                      child: const Icon(
-                        Icons.store,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance.collection('sellers').doc(sellerId).snapshots(),
+        builder: (context, snapshot) {
+          // Use stream data if available, otherwise fallback to widget data
+          Map<String, dynamic> data;
+          if (snapshot.hasData && snapshot.data != null && snapshot.data!.exists) {
+            data = snapshot.data!.data() as Map<String, dynamic>;
+          } else {
+            data = widget.sellerData.data() as Map<String, dynamic>;
+          }
 
-          // --- 2. INFO TOKO ---
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Chip(
-                        label: Text(data['kategori'] ?? 'Umum'),
-                        backgroundColor: Colors.blue.shade50,
-                        labelStyle: TextStyle(color: Colors.blue.shade800),
-                      ),
-                      const Spacer(),
-                    ],
+          return CustomScrollView(
+            slivers: [
+              // --- 1. HEADER GAMBAR TOKO ---
+              SliverAppBar(
+                expandedHeight: 200.0,
+                pinned: true,
+                backgroundColor: Colors.blue.shade800,
+                iconTheme: const IconThemeData(color: Colors.white),
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    data['namaToko'] ?? 'Toko',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          data['alamat'] ?? '-',
-                          style: const TextStyle(color: Colors.grey),
+                  background: (data['fotoToko'] ?? data['fotoUmkm'] ?? data['foto']) != null && (data['fotoToko'] ?? data['fotoUmkm'] ?? data['foto']) != ''
+                      ? Image.network(data['fotoToko'] ?? data['fotoUmkm'] ?? data['foto'], fit: BoxFit.cover)
+                          : Container(
+                          color: Colors.blue.shade800,
+                          child: const Icon(
+                            Icons.store,
+                            size: 80,
+                            color: Colors.white,
+                          ),
                         ),
+                ),
+              ),
+
+              // --- 2. INFO TOKO ---
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Chip(
+                            label: Text(data['kategori'] ?? 'Umum'),
+                            backgroundColor: Colors.blue.shade50,
+                            labelStyle: TextStyle(color: Colors.blue.shade800),
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              data['alamat'] ?? '-',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        data['deskripsi'] ?? 'Tidak ada deskripsi.',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const Divider(height: 30),
+                      _buildRatingSection(data),
+                      const Divider(height: 30),
+                      const Text(
+                        "Daftar Produk",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    data['deskripsi'] ?? 'Tidak ada deskripsi.',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const Divider(height: 30),
-                  _buildRatingSection(data),
-                  const Divider(height: 30),
-                  const Text(
-                    "Daftar Produk",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
 
-          // --- 3. DAFTAR PRODUK (GRID) ---
-          StreamBuilder<QuerySnapshot>(
-            // Query: Ambil produk yang sellerId-nya sama dengan toko ini
-            stream: FirebaseFirestore.instance
-                .collection('products')
-                .where('sellerId', isEqualTo: sellerId)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: Text("Toko ini belum upload produk.")),
-                  ),
-                );
-              }
+              // --- 3. DAFTAR PRODUK (GRID) ---
+              StreamBuilder<QuerySnapshot>(
+                // Query: Ambil produk yang sellerId-nya sama dengan toko ini
+                stream: FirebaseFirestore.instance
+                    .collection('products')
+                    .where('sellerId', isEqualTo: sellerId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SliverToBoxAdapter(
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: Text("Toko ini belum upload produk.")),
+                      ),
+                    );
+                  }
 
-              var products = snapshot.data!.docs;
+                  var products = snapshot.data!.docs;
 
-              return SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.75,
-                  ),
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    var prodData =
-                        products[index].data() as Map<String, dynamic>;
-                    return _buildProductCard(prodData, data['noWhatsapp']);
-                  }, childCount: products.length),
-                ),
-              );
-            },
-          ),
-        ],
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: 0.75,
+                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        var prodData =
+                            products[index].data() as Map<String, dynamic>;
+                        return _buildProductCard(prodData, data['noWhatsapp'] ?? '');
+                      }, childCount: products.length),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        }
       ),
     );
   }

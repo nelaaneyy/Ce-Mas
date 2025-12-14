@@ -46,7 +46,7 @@ class _DashboardTokoPageState extends State<DashboardTokoPage> {
           String kategori = data['kategori'] ?? '-';
           String alamat = data['alamat'] ?? '-';
           String deskripsi = data['deskripsi'] ?? '-';
-          String? fotoToko = data['fotoToko'];
+          String? fotoToko = data['fotoToko'] ?? data['fotoUmkm'] ?? data['foto'];
 
           return SafeArea(
             child: Column(

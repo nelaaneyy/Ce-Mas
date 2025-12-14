@@ -9,6 +9,7 @@ class RegistrationData {
   String namaPemilik = '';
   String nik = '';
   String? fotoKtpPath; // Path ke file foto KTP
+  String fotoKtpUrl = ''; // URL setelah upload ke Firebase Storage
 
   // Step 3: UMKM
   String namaUmkm = '';

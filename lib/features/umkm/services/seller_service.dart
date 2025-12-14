@@ -27,6 +27,12 @@ class SellerService {
     String? fotoTokoUrl,
     String? fotoKtpUrl,
     String? fotoUmkmUrl,
+    // New fields
+    String? nik,
+    String? namaPemilik,
+    String? instagram,
+    String? facebook,
+    String? tiktok,
   }) async {
     User? user = _auth.currentUser;
     if (user == null) return;
@@ -45,10 +51,18 @@ class SellerService {
       'noWhatsapp': formattedWA,
       'alamat': alamat,
       'kategori': kategori, // Penting untuk filter
-      'foto': fotoTokoUrl ?? '', // Foto toko utama
-      'fotoToko': fotoTokoUrl ?? '', // Kompatibilitas dengan DetailTokoPage
+      'foto': fotoTokoUrl ?? fotoUmkmUrl ?? '', // Foto toko utama (Logo/Banner) - Fallback to UMKM photo
+      'fotoToko': fotoTokoUrl ?? fotoUmkmUrl ?? '', // Kompatibilitas dengan DetailTokoPage - Fallback to UMKM photo
       'fotoKtp': fotoKtpUrl ?? '', // Foto KTP pemilik
       'fotoUmkm': fotoUmkmUrl ?? '', // Foto UMKM
+      
+      // New Fields Saved
+      'nik': nik ?? '',
+      'namaPemilik': namaPemilik ?? '',
+      'instagram': instagram ?? '',
+      'facebook': facebook ?? '',
+      'tiktok': tiktok ?? '',
+
       'createdAt': FieldValue.serverTimestamp(),
       'rating': 0.0,
       'jumlahUlasan': 0,
@@ -69,6 +83,41 @@ class SellerService {
     } catch (e) {
       debugPrint("Log activity failed: $e");
     }
+  }
+
+  // --- 2b. UPDATE DATA TOKO ---
+  Future<void> updateStoreProfile({
+    required String namaToko,
+    required String deskripsi,
+    required String noWhatsapp,
+    required String alamat,
+    String? fotoToko, // Added parameter
+  }) async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    // Format WA
+    String formattedWA = noWhatsapp.trim();
+    if (formattedWA.startsWith('0')) {
+      formattedWA = '62${formattedWA.substring(1)}';
+    }
+
+    final Map<String, dynamic> data = {
+      'namaToko': namaToko,
+      'deskripsi': deskripsi,
+      'noWhatsapp': formattedWA,
+      'alamat': alamat,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (fotoToko != null) {
+      data['fotoToko'] = fotoToko;
+      // Update legacy fields to keep in sync
+      data['foto'] = fotoToko; 
+      data['fotoUmkm'] = fotoToko;
+    }
+
+    await _firestore.collection('sellers').doc(user.uid).update(data);
   }
 
   // --- 3. AMBIL PRODUK SAYA (READ) ---
@@ -197,5 +246,37 @@ class SellerService {
     );
 
     return controller.stream;
+  }
+  // --- 8. INCREMENT UNIQUE STORE VIEW ---
+  Future<void> incrementStoreView(String sellerId) async {
+    User? user = _auth.currentUser;
+    // Jika user belum login atau user adalah pemilik toko sendiri, tidak dihitung
+    if (user == null || user.uid == sellerId) return;
+
+    final sellerRef = _firestore.collection('sellers').doc(sellerId);
+    final visitorRef = sellerRef.collection('visitors').doc(user.uid);
+
+    try {
+      final visitorDoc = await visitorRef.get();
+      if (!visitorDoc.exists) {
+        // Jika user belum pernah mengunjungi toko ini
+        await _firestore.runTransaction((transaction) async {
+          transaction.set(visitorRef, {
+            'firstVisit': FieldValue.serverTimestamp(),
+            'lastVisit': FieldValue.serverTimestamp(),
+          });
+          transaction.update(sellerRef, {
+            'views': FieldValue.increment(1),
+          });
+        });
+        debugPrint("View verification successful. Views incremented.");
+      } else {
+         // Opsional: Update lastVisit jika ingin tracking kapan terakhir berkunjung
+         await visitorRef.update({'lastVisit': FieldValue.serverTimestamp()});
+         debugPrint("User already viewed this store. Skipping increment.");
+      }
+    } catch (e) {
+      debugPrint("Failed to increment store view: $e");
+    }
   }
 }

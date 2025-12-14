@@ -96,13 +96,59 @@ class VerificationDetailScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     _buildDetailRow('Nama UMKM', data.namaUmkm),
                     _buildDetailRow('Pemilik', data.namaPemilik),
-                    _buildDetailRow('NIK', data.nik), // Added NIK
+                    // _buildDetailRow('NIK', data.nik), // Moved to bottom
                     _buildDetailRow('Kategori', data.kategori),
-                    _buildDetailRow('Alamat', 'Blok ${data.blok} No. ${data.nomor}'),
-                    _buildDetailRow('Kontak', '${data.noHp}\n${data.whatsapp}'),
+                    _buildDetailRow('Alamat', 'Blok ${data.blok} No. ${data.nomor} ${data.alamatLengkap}'.trim()), // Combined address
+                    
                     const SizedBox(height: 10),
                     const Divider(),
                     const SizedBox(height: 10),
+
+                    // KTP Photo Section
+                    Text(
+                      'Foto KTP',
+                      style: GoogleFonts.mPlusRounded1c(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: data.fotoKtpUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                data.fotoKtpUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (c, o, s) => const Center(
+                                    child: Icon(Icons.broken_image, color: Colors.grey)),
+                              ),
+                            )
+                          : const Center(
+                              child: Text('-', style: TextStyle(color: Colors.grey))),
+                    ),
+                    
+                    const SizedBox(height: 20),
+
+                    _buildDetailRow('Kontak', '${data.noHp}\n${data.whatsapp}'),
+                    
+                    // Social Media
+                    if (data.instagram.isNotEmpty) _buildDetailRow('Instagram', data.instagram),
+                    if (data.facebook.isNotEmpty) _buildDetailRow('Facebook', data.facebook),
+                    if (data.tiktok.isNotEmpty) _buildDetailRow('TikTok', data.tiktok),
+                    
+                    const SizedBox(height: 10),
+                    const Divider(),
+                    const SizedBox(height: 10),
+
                     Text(
                       'Deskripsi Usaha',
                       style: GoogleFonts.mPlusRounded1c(
@@ -121,8 +167,8 @@ class VerificationDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                     Text(
-                      'Lokasi Maps',
+                    Text(
+                      'NIK',
                       style: GoogleFonts.mPlusRounded1c(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -131,11 +177,10 @@ class VerificationDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      data.linkMaps.isEmpty ? '-' : data.linkMaps,
+                      data.nik.isEmpty ? '-' : data.nik,
                       style: GoogleFonts.mPlusRounded1c(
                         fontSize: 14,
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
+                        color: Colors.black87,
                       ),
                     ),
                   ],

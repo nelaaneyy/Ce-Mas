@@ -28,6 +28,13 @@ class AdminService {
           ..whatsapp = data['noWhatsapp'] ?? ''
           ..fotoUmkmUrl = data['fotoUmkm'] ?? ''
           ..status = data['status'] ?? 'Menunggu'
+          // Mapped New Fields
+          ..nik = data['nik'] ?? ''
+          ..namaPemilik = data['namaPemilik'] ?? ''
+          ..fotoKtpUrl = data['fotoKtp'] ?? ''
+          ..instagram = data['instagram'] ?? ''
+          ..facebook = data['facebook'] ?? ''
+          ..tiktok = data['tiktok'] ?? ''
           ..uid = doc.id;
       }).toList();
     });

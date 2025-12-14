@@ -7,6 +7,7 @@ import 'package:cemas/core/theme/app_theme.dart';
 import 'package:cemas/features/umkm/services/seller_service.dart';
 import 'package:cemas/features/umkm/pages/registration/daftar_umkm_main.dart';
 import 'package:cemas/features/umkm/pages/dashboard_toko_page.dart';
+import 'package:cemas/features/umkm/pages/edit_shop_profile_page.dart'; // Import
 import 'package:cemas/shared/pages/profile_page.dart';
 import 'package:cemas/shared/pages/tentang_kami.dart';
 import 'package:cemas/shared/pages/login_page.dart';
@@ -15,7 +16,9 @@ import 'package:cemas/shared/register_page.dart';
 
 class AkunPage extends StatelessWidget {
 
-  const AkunPage({super.key});
+  final VoidCallback? onBackToHome;
+
+  const AkunPage({super.key, this.onBackToHome});
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +32,20 @@ class AkunPage extends StatelessWidget {
         foregroundColor: AppTheme.backgroundWhite,
         title: const Text('Akun'),
         elevation: 0,
-        automaticallyImplyLeading: false,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (onBackToHome != null) {
+              onBackToHome!(); // Switch tab if callback provided
+            } else {
+               // Only pop if we can, otherwise do nothing or go home
+               if (Navigator.canPop(context)) {
+                 Navigator.pop(context);
+               } 
+            }
+          },
+        ),
       ),
 
       body: SingleChildScrollView(
@@ -101,21 +116,42 @@ class AkunPage extends StatelessWidget {
                 final bool isFromStore = (args is Map && args['isFromStore'] == true);
 
                 if (isFromStore) {
-                  return _menuTile(
-                    icon: Icons.home,
-                    title: "Kembali ke Beranda Pembeli",
-                    iconColor: AppTheme.primaryBlue,
-                    onTap: () {
-                      // Clear stack and go to AuthWrapper (which returns Home) or pop until root
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
+                  // --- MODE PENGATURAN TOKO (Saat di dalam Dashboard) ---
+                  return Column(
+                    children: [
+                      _menuTile(
+                        icon: Icons.home,
+                        title: "Kembali ke Beranda Pembeli",
+                        iconColor: AppTheme.primaryBlue,
+                        onTap: () {
+                          // Pop until we hit the root (MainPage) which shows Buyer Home
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          if (onBackToHome != null) onBackToHome!(); // Ensure Tab 0 is selected
+                        },
+                      ),
+                      const SizedBox(height: AppTheme.spaceMD),
+                      _menuTile(
+                        icon: Icons.edit_note,
+                        title: "Kelola Data Toko",
+                        iconColor: AppTheme.primaryBlue,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const EditShopProfilePage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   );
                 }
 
+                // --- MODE AKUN BIASA (Tab Akun) ---
                 if (hasStore) {
                   return _menuTile(
                     icon: Icons.store,
-                    title: "Kelola Toko Saya",
+                    title: "Masuk Toko Saya",
                     iconColor: AppTheme.primaryBlue,
                     onTap: () {
                       Navigator.push(

@@ -22,86 +22,111 @@ class StepPemilik extends StatefulWidget {
 
 class _StepPemilikState extends State<StepPemilik> {
   final ImagePicker _imagePicker = ImagePicker();
+  final _formKey = GlobalKey<FormState>();
+
+  void _handleNext() {
+    if (_formKey.currentState!.validate()) {
+      if (widget.data.fotoKtpPath == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Foto KTP wajib diupload.")),
+        );
+        return;
+      }
+      _formKey.currentState!.save();
+      widget.onNext();
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Center(
-            child: Column(
+      child: Form(
+        key: _formKey,
+        child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  "Data Pemilik",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                const Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        "Data Pemilik",
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        "Identitas pemilik untuk verifikasi",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
-                SizedBox(height: 5),
-                Text(
-                  "Identitas pemilik untuk verifikasi",
-                  style: TextStyle(color: Colors.grey),
+                const SizedBox(height: 20),
+
+                _buildTextField(
+                  label: 'Nama Pemilik *',
+                  initialValue: widget.data.namaPemilik,
+                  onChanged: (val) => widget.data.namaPemilik = val,
+                  validator: (val) => (val == null || val.isEmpty) ? "Nama pemilik belum diisi." : null,
+                ),
+
+                _buildTextField(
+                  label: 'NIK *',
+                  initialValue: widget.data.nik,
+                  isNumber: true,
+                  onChanged: (val) => widget.data.nik = val,
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return "NIK wajib diisi.";
+                    if (val.length < 16) return "NIK harus 16 digit.";
+                    return null;
+                  },
+                ),
+
+                // KTP Validation Logic handled in _handleNext usually, 
+                // but we can also show error if needed.
+                _buildKtpPhotoSection(),
+
+                const SizedBox(height: 30),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          side: BorderSide(color: Colors.blue.shade800),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: widget.onBack,
+                        child: Text(
+                          'Kembali',
+                          style: TextStyle(color: Colors.blue.shade800),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade800,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _handleNext, // use local handleNext
+                        child: const Text(
+                          'Lanjut',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          _buildTextField(
-            label: 'Nama Pemilik *',
-            initialValue:
-                widget.data.namaPemilik, // Isi jika sudah ada data sebelumnya
-            onChanged: (val) => widget.data.namaPemilik = val,
-          ),
-
-          _buildTextField(
-            label: 'NIK *',
-            initialValue: widget.data.nik,
-            isNumber: true,
-            onChanged: (val) => widget.data.nik = val,
-          ),
-
-          _buildKtpPhotoSection(),
-
-          const SizedBox(height: 30),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: BorderSide(color: Colors.blue.shade800),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: widget.onBack, // Panggil fungsi kembali
-                  child: Text(
-                    'Kembali',
-                    style: TextStyle(color: Colors.blue.shade800),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade800,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: widget.onNext, // Panggil fungsi lanjut
-                  child: const Text(
-                    'Lanjut',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -111,6 +136,7 @@ class _StepPemilikState extends State<StepPemilik> {
     required Function(String) onChanged,
     String? initialValue,
     bool isNumber = false,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,6 +149,8 @@ class _StepPemilikState extends State<StepPemilik> {
         TextFormField(
           initialValue: initialValue,
           onChanged: onChanged,
+          validator: validator,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(

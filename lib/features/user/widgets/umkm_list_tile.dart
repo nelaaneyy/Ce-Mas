@@ -9,13 +9,14 @@ class UmkmListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Ambil data dari dokumen seller
-    String namaToko = sellerData['namaToko'] ?? 'Nama Toko';
-    String alamat = sellerData['alamat'] ?? 'Alamat';
-    String fotoToko = sellerData['fotoToko'] ?? '';
+    final data = sellerData.data() as Map<String, dynamic>;
+    String namaToko = data['namaToko'] ?? 'Nama Toko';
+    String alamat = data['alamat'] ?? 'Alamat';
+    String fotoToko = data['fotoToko'] ?? '';
 
     // Ambil rating dan jumlah ulasan dari Firestore
-    final rating = (sellerData['rating'] as num?)?.toDouble() ?? 0.0;
-    final jumlahUlasan = sellerData['jumlahUlasan'] ?? 0;
+    final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+    final jumlahUlasan = data['jumlahUlasan'] ?? 0;
     String ratingStr = rating.toStringAsFixed(1);
     String ulasan = "($jumlahUlasan ulasan)";
 

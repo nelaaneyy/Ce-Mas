@@ -40,9 +40,9 @@ class StepReview extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          _buildSectionTitle("Akun & Pemilik"),
-          _buildInfoRow("Email", data.email),
-          _buildInfoRow("Username", data.username),
+          _buildSectionTitle("Pemilik"),
+          // _buildInfoRow("Email", data.email), // Removed
+          // _buildInfoRow("Username", data.username), // Removed
           _buildInfoRow("Nama Pemilik", data.namaPemilik),
           _buildInfoRow("NIK", data.nik),
 
