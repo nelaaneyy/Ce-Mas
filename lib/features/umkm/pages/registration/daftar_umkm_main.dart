@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart'; // Tambahkan ini untuk XFile
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
 
 // Import service
@@ -152,25 +153,46 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
     }
   }
 
-  // --- FUNGSI UPLOAD FOTO KTP ---
+  // --- FUNGSI UPLOAD FOTO KTP (DENGAN KOMPRESI) ---
   Future<String?> _uploadKtpPhoto(String uid) async {
     if (_data.fotoKtpPath == null || _data.fotoKtpPath!.isEmpty) {
       return null;
     }
 
     try {
-      final ktpBytes = await XFile(_data.fotoKtpPath!).readAsBytes();
-      if (ktpBytes.isEmpty) return null;
+      // Kompres gambar sebelum upload untuk mempercepat proses
+      final compressedBytes = await FlutterImageCompress.compressWithFile(
+        _data.fotoKtpPath!,
+        quality: 70, // Kualitas 70% (balance antara ukuran dan kualitas)
+        format: CompressFormat.jpeg,
+      );
+      
+      if (compressedBytes == null || compressedBytes.isEmpty) {
+        debugPrint("Warning: Kompresi KTP gagal, menggunakan file asli");
+        final ktpBytes = await XFile(_data.fotoKtpPath!).readAsBytes();
+        if (ktpBytes.isEmpty) return null;
+        
+        final storageRef = FirebaseStorage.instance.ref().child(
+          "seller_ktp/$uid.jpg",
+        );
+        await storageRef.putData(
+          ktpBytes,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        final url = await storageRef.getDownloadURL();
+        debugPrint("KTP foto uploaded (original): $url");
+        return url;
+      }
 
       final storageRef = FirebaseStorage.instance.ref().child(
         "seller_ktp/$uid.jpg",
       );
       await storageRef.putData(
-        ktpBytes,
+        compressedBytes,
         SettableMetadata(contentType: 'image/jpeg'),
       );
       final url = await storageRef.getDownloadURL();
-      debugPrint("KTP foto uploaded: $url");
+      debugPrint("KTP foto uploaded (compressed): $url");
       return url;
     } catch (e) {
       debugPrint("Warning: Gagal upload KTP: $e");
@@ -178,25 +200,46 @@ class _DaftarUmkmMainPageState extends State<DaftarUmkmMainPage> {
     }
   }
 
-  // --- FUNGSI UPLOAD FOTO UMKM ---
+  // --- FUNGSI UPLOAD FOTO UMKM (DENGAN KOMPRESI) ---
   Future<String?> _uploadUmkmPhoto(String uid) async {
     if (_data.fotoUmkmPath == null || _data.fotoUmkmPath!.isEmpty) {
       return null;
     }
 
     try {
-      final umkmBytes = await XFile(_data.fotoUmkmPath!).readAsBytes();
-      if (umkmBytes.isEmpty) return null;
+      // Kompres gambar sebelum upload untuk mempercepat proses
+      final compressedBytes = await FlutterImageCompress.compressWithFile(
+        _data.fotoUmkmPath!,
+        quality: 70, // Kualitas 70% (balance antara ukuran dan kualitas)
+        format: CompressFormat.jpeg,
+      );
+      
+      if (compressedBytes == null || compressedBytes.isEmpty) {
+        debugPrint("Warning: Kompresi UMKM gagal, menggunakan file asli");
+        final umkmBytes = await XFile(_data.fotoUmkmPath!).readAsBytes();
+        if (umkmBytes.isEmpty) return null;
+        
+        final storageRef = FirebaseStorage.instance.ref().child(
+          "seller_umkm/$uid.jpg",
+        );
+        await storageRef.putData(
+          umkmBytes,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        final url = await storageRef.getDownloadURL();
+        debugPrint("UMKM foto uploaded (original): $url");
+        return url;
+      }
 
       final storageRef = FirebaseStorage.instance.ref().child(
         "seller_umkm/$uid.jpg",
       );
       await storageRef.putData(
-        umkmBytes,
+        compressedBytes,
         SettableMetadata(contentType: 'image/jpeg'),
       );
       final url = await storageRef.getDownloadURL();
-      debugPrint("UMKM foto uploaded: $url");
+      debugPrint("UMKM foto uploaded (compressed): $url");
       return url;
     } catch (e) {
       debugPrint("Warning: Gagal upload UMKM: $e");

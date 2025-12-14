@@ -109,14 +109,19 @@ class ComplaintListScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  data['sender']!,
-                  style: GoogleFonts.mPlusRounded1c(
-                    fontSize: 16,
-                    fontWeight: isUnread ? FontWeight.w900 : FontWeight.bold, // Bolder if unread
-                    color: isUnread ? Colors.black : Colors.black87,
+                Expanded(
+                  child: Text(
+                    data['sender']!,
+                    style: GoogleFonts.mPlusRounded1c(
+                      fontSize: 16,
+                      fontWeight: isUnread ? FontWeight.w900 : FontWeight.bold,
+                      color: isUnread ? Colors.black : Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(

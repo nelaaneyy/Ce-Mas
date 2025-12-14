@@ -1,8 +1,9 @@
 import 'package:cemas/core/services/auth_service.dart';
-import 'package:cemas/features/admin/home_screen.dart';
+import 'package:cemas/features/admin/admin_main_page.dart';
 import 'package:cemas/shared/pages/login_page.dart'; // Premium Login
 import 'package:cemas/shared/register_page.dart'; // Legacy Register
 import 'package:cemas/features/user/pages/beranda_page.dart';
+import 'package:cemas/shared/pages/main_page.dart';
 import 'package:flutter/material.dart';
 
 class AuthWrapper extends StatefulWidget {
@@ -26,9 +27,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.hasData) {
           final user = snapshot.data!;
           if (user.role == 'admin') {
-            return const AdminHomeScreen();
+            return const AdminMainPage();
           } else {
-            return BerandaPage(onTabJump: (_) {});
+            // Updated to use MainPage which contains the BottomNavigationBar
+            return const MainPage();
           }
         }
 

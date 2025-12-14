@@ -338,15 +338,20 @@ class _BerandaPageState extends State<BerandaPage> {
         String nama = 'Pengguna';
         if (snapshot.hasData && snapshot.data!.exists) {
             final data = snapshot.data!.data() as Map<String, dynamic>;
-            // Try to find a name field
-            if (data['namaPertama'] != null) nama = data['namaPertama'];
-            else if (data['nama'] != null) nama = data['nama'];
+            // Check for various name fields (prioritize 'name' as it's used in registration)
+            if (data['name'] != null && data['name'].toString().isNotEmpty) {
+              nama = data['name'];
+            } else if (data['namaPertama'] != null && data['namaPertama'].toString().isNotEmpty) {
+              nama = data['namaPertama'];
+            } else if (data['nama'] != null && data['nama'].toString().isNotEmpty) {
+              nama = data['nama'];
+            }
         }
         return Text(
           'Halo, $nama!',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 22, // Agak lebih kecil agar muat
+            fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,

@@ -1,6 +1,6 @@
 name: cemas
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -21,6 +21,8 @@ dependencies:
 
   # ====== Image Picker ======
   image_picker: ^1.2.1
+  # ====== Image Compression ======
+  flutter_image_compress: ^2.3.0
   # ====== Google Sign-In (used for social login) ======
   google_sign_in: ^6.1.0
   google_fonts: ^6.2.1

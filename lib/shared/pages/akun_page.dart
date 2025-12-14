@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:cemas/core/services/auth_service.dart';
+import 'package:cemas/core/theme/app_theme.dart';
 import 'package:cemas/features/umkm/services/seller_service.dart';
 import 'package:cemas/features/umkm/pages/registration/daftar_umkm_main.dart';
 import 'package:cemas/features/umkm/pages/dashboard_toko_page.dart';
@@ -22,17 +23,18 @@ class AkunPage extends StatelessWidget {
     final SellerService sellerService = SellerService();
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        backgroundColor: Colors.blue.shade800,
-        title: const Text('Akun', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.backgroundWhite,
+        title: const Text('Akun'),
         elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spaceLG),
         child: Column(
           children: [
             // ---- HEADER PROFILE ----
@@ -61,22 +63,19 @@ class AkunPage extends StatelessWidget {
 
                 return Column(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 40,
-                      backgroundColor: Colors.blue,
-                      child: Icon(Icons.person, size: 50, color: Colors.white),
+                      backgroundColor: AppTheme.primaryBlue,
+                      child: const Icon(Icons.person, size: 50, color: AppTheme.backgroundWhite),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.spaceSM),
                     Text(
                       nama,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTheme.h2,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Text(email, style: TextStyle(color: Colors.grey[600])),
+                    Text(email, style: AppTheme.bodySmall),
                   ],
                 );
               },
@@ -102,10 +101,10 @@ class AkunPage extends StatelessWidget {
                 final bool isFromStore = (args is Map && args['isFromStore'] == true);
 
                 if (isFromStore) {
-                   return _menuTile(
+                  return _menuTile(
                     icon: Icons.home,
                     title: "Kembali ke Beranda Pembeli",
-                    iconColor: Colors.blue.shade800,
+                    iconColor: AppTheme.primaryBlue,
                     onTap: () {
                       // Clear stack and go to AuthWrapper (which returns Home) or pop until root
                       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -117,7 +116,7 @@ class AkunPage extends StatelessWidget {
                   return _menuTile(
                     icon: Icons.store,
                     title: "Kelola Toko Saya",
-                    iconColor: Colors.blue.shade800,
+                    iconColor: AppTheme.primaryBlue,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -131,7 +130,7 @@ class AkunPage extends StatelessWidget {
                   return _menuTile(
                     icon: Icons.add_business,
                     title: "Daftar Gratis sebagai UMKM",
-                    iconColor: Colors.green,
+                    iconColor: AppTheme.secondaryGreen,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -146,7 +145,7 @@ class AkunPage extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spaceMD),
 
             _menuTile(
               icon: Icons.person_outline,
@@ -156,7 +155,7 @@ class AkunPage extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spaceMD),
 
             _menuTile(
               icon: Icons.info_outline,
@@ -166,7 +165,7 @@ class AkunPage extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spaceMD),
 
              _menuTile(
               icon: Icons.support_agent,
@@ -181,13 +180,13 @@ class AkunPage extends StatelessWidget {
               },
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTheme.spaceMD),
 
             _menuTile(
               icon: Icons.logout,
               title: "Keluar",
-              titleColor: Colors.red,
-              iconColor: Colors.red,
+              titleColor: AppTheme.secondaryRed,
+              iconColor: AppTheme.secondaryRed,
               onTap: () async {
                 bool confirm = await showDialog(
                   context: context, 
@@ -196,7 +195,10 @@ class AkunPage extends StatelessWidget {
                     content: const Text("Yakin ingin keluar?"),
                     actions: [
                       TextButton(child: const Text("Batal"), onPressed: () => Navigator.pop(ctx, false)),
-                      TextButton(child: const Text("Keluar", style: TextStyle(color: Colors.red)), onPressed: () => Navigator.pop(ctx, true)),
+                      TextButton(
+                        child: const Text("Keluar", style: TextStyle(color: AppTheme.secondaryRed)), 
+                        onPressed: () => Navigator.pop(ctx, true)
+                      ),
                     ],
                   )
                 ) ?? false;
@@ -239,32 +241,20 @@ class AkunPage extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppTheme.cardDecoration(),
       child: ListTile(
-        leading: Icon(icon, color: iconColor ?? Colors.blue.shade800),
+        leading: Icon(icon, color: iconColor ?? AppTheme.primaryBlue),
         title: Text(
           title,
-          style: TextStyle(
+          style: AppTheme.labelBold.copyWith(
             fontSize: 16,
-            color: titleColor ?? Colors.black,
-            fontWeight: FontWeight.w600,
+            color: titleColor ?? AppTheme.textPrimary,
           ),
         ),
         trailing: const Icon(
           Icons.arrow_forward_ios,
           size: 18,
-          color: Colors.grey,
+          color: AppTheme.textSecondary,
         ),
         onTap: onTap,
       ),

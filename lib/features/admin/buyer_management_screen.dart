@@ -163,36 +163,50 @@ class _BuyerManagementScreenState extends State<BuyerManagementScreen> {
           children: [
             const Icon(Icons.warning, color: Colors.red),
             const SizedBox(width: 8),
-            Text('Konfirmasi Hapus',
-                style: GoogleFonts.mPlusRounded1c(fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Text(
+                'Konfirmasi Hapus',
+                style: GoogleFonts.mPlusRounded1c(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus data pembeli "${data['name']}"?',
-          style: GoogleFonts.mPlusRounded1c(),
+        content: SingleChildScrollView(
+          child: Text(
+            'Apakah Anda yakin ingin menghapus data pembeli "${data['name']}"?',
+            style: GoogleFonts.mPlusRounded1c(),
+          ),
         ),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Batal',
-                style: GoogleFonts.mPlusRounded1c(
-                    color: Colors.grey, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.mPlusRounded1c(
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close Dialog
-              _deleteBuyer(data['uid'], data['name']); // Perform Delete
+              Navigator.pop(context);
+              _deleteBuyer(data['uid'], data['name']);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: Text('Hapus',
-                style: GoogleFonts.mPlusRounded1c(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Hapus',
+              style: GoogleFonts.mPlusRounded1c(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

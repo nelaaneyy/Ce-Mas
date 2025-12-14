@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cemas/core/theme/app_theme.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -146,10 +147,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        backgroundColor: Colors.blue.shade800,
-        title: const Text('Profile', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.backgroundWhite,
+        title: const Text('Profile'),
+        elevation: 0,
+        centerTitle: true,
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection("users").doc(user.uid).snapshots(),
@@ -180,7 +184,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppTheme.spaceLG),
             children: [
               Center(
                 child: Stack(
@@ -196,18 +200,17 @@ class _ProfilePageState extends State<ProfilePage> {
                           : null,
                     ),
 
-                    // Tombol edit foto
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: CircleAvatar(
-                        backgroundColor: Colors.blue.shade800,
+                        backgroundColor: AppTheme.primaryBlue,
                         radius: 18,
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.camera_alt,
-                            size: 18,
-                            color: Colors.white,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.camera_alt,
+                              size: 18,
+                              color: AppTheme.backgroundWhite,
                           ),
                           onPressed: uploadingImage ? null : pickImage,
                         ),
@@ -223,17 +226,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Center(child: CircularProgressIndicator()),
                 ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.spaceMD),
 
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 560),
                   child: Text(
                     "$fName $lName",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTheme.h3,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -241,7 +241,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.spaceXL),
 
               _profileTile(
                 title: "Nama Depan",
@@ -279,16 +279,12 @@ class _ProfilePageState extends State<ProfilePage> {
     required VoidCallback onTap,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      margin: const EdgeInsets.only(bottom: AppTheme.spaceMD),
+      decoration: AppTheme.cardDecoration(),
       child: ListTile(
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: AppTheme.labelBold,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

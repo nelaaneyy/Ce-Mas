@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cemas/core/theme/app_theme.dart';
 import 'package:cemas/shared/pages/detail_notifikasi_page.dart';
 
 class NotifikasiPage extends StatelessWidget {
@@ -34,25 +35,25 @@ class NotifikasiPage extends StatelessWidget {
     ];
 
     return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        backgroundColor: Colors.blue.shade800,
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.backgroundWhite,
         title: const Text("Notifikasi"),
+        elevation: 0,
+        centerTitle: true,
       ),
 
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spaceLG),
         itemCount: notifikasi.length,
         itemBuilder: (context, index) {
           final item = notifikasi[index];
 
           return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
+            margin: const EdgeInsets.only(bottom: AppTheme.spaceLG),
+            padding: const EdgeInsets.all(AppTheme.spaceLG),
+            decoration: AppTheme.cardDecoration(),
 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,36 +63,39 @@ class NotifikasiPage extends StatelessWidget {
                   children: [
                     Text(
                       item["waktu"],
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
-                      ),
+                      style: AppTheme.bodySmall,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppTheme.spaceSM),
                     if (!item["dibaca"])
-                      const Icon(Icons.circle, size: 10, color: Colors.red),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.secondaryRed,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.spaceSM),
 
                 // Pesan
                 Text(
                   item["pesan"],
-                  style: const TextStyle(
+                  style: AppTheme.labelBold.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: item["dibaca"] ? FontWeight.w600 : FontWeight.bold,
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: AppTheme.spaceMD),
 
                 // Tombol tindakan
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // ➤ Navigasi ke halaman detail notifikasi
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -104,15 +108,20 @@ class NotifikasiPage extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade800,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: AppTheme.backgroundWhite,
+                      padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceMD),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
                       ),
+                      elevation: 0,
                     ),
                     child: const Text(
                       "Lihat Notifikasi",
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

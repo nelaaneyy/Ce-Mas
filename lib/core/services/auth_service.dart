@@ -32,19 +32,37 @@ class AuthService {
     return _auth.currentUser;
   }
 
-  // --- STREAM STATUS AUTH WITH ROLE ---
+  // --- STREAM STATUS AUTH WITH ROLE (OPTIMIZED) ---
   Stream<UserModel?> get authStateChanges {
     return _auth.authStateChanges().asyncMap((User? user) async {
       if (user == null) return null;
 
       try {
-        print("AuthService: Checking role for ${user.uid} (${user.email})"); // DEBUG
+        print("AuthService: Checking role for ${user.uid} (${user.email})");
 
-        // 1. Cek User Biasa / UMKM
-        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        // OPTIMIZATION: Query users and admins in PARALLEL instead of sequential
+        final results = await Future.wait([
+          _firestore.collection('users').doc(user.uid).get(),
+          _firestore.collection('admins').doc(user.uid).get(),
+        ]);
+
+        final userDoc = results[0];
+        final adminDoc = results[1];
+
+        // 1. Check Admin first (priority)
+        if (adminDoc.exists) {
+           print("AuthService: Found in 'admins'. Assigning role 'admin'.");
+           return UserModel(
+            uid: user.uid, 
+            email: user.email ?? '', 
+            role: 'admin'
+          );
+        }
+
+        // 2. Check User
         if (userDoc.exists && userDoc.data() != null) {
           final data = userDoc.data() as Map<String, dynamic>;
-          print("AuthService: Found in 'users'. Role: ${data['role']}"); // DEBUG
+          print("AuthService: Found in 'users'. Role: ${data['role']}");
           return UserModel(
             uid: user.uid, 
             email: user.email ?? '', 
@@ -52,19 +70,8 @@ class AuthService {
           );
         }
 
-        // 2. Cek Admin (jika tidak ada di users)
-        DocumentSnapshot adminDoc = await _firestore.collection('admins').doc(user.uid).get();
-        if (adminDoc.exists) {
-           print("AuthService: Found in 'admins'. Assigning role 'admin'."); // DEBUG
-           return UserModel(
-            uid: user.uid, 
-            email: user.email ?? '', 
-            role: 'admin' // Force role admin
-          );
-        }
-
-        print("AuthService: User not found in DB. Defaulting to 'pembeli'."); // DEBUG
-        // 3. Default (Baru daftar / belum ada data)
+        print("AuthService: User not found in DB. Defaulting to 'pembeli'.");
+        // 3. Default (New user / no data yet)
         return UserModel(uid: user.uid, email: user.email ?? '', role: 'pembeli');
         
       } catch (e) {

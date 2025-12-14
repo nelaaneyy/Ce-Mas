@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:cemas/features/user/widgets/umkm_list_tile.dart'; // Import widget baru kita
-import 'package:cemas/features/user/pages/umkm_search_page.dart'; // Import halaman pencarian
+import 'package:cemas/core/theme/app_theme.dart';
+import 'package:cemas/features/user/widgets/umkm_list_tile.dart';
+import 'package:cemas/features/user/pages/umkm_search_page.dart';
 
 class UmkmPage extends StatefulWidget {
   const UmkmPage({super.key});
@@ -24,16 +25,13 @@ class _UmkmPageState extends State<UmkmPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      // 1. AppBar Sederhana (sesuai desain)
+      backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text(
-          'UMKM',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.blue.shade800, // Latar belakang putih
+        title: const Text('UMKM'),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: AppTheme.backgroundWhite,
         elevation: 0,
-        automaticallyImplyLeading: false, // Sembunyikan tombol 'back'
+        automaticallyImplyLeading: false,
         centerTitle: true,
       ),
       body: Column(
@@ -51,11 +49,9 @@ class _UmkmPageState extends State<UmkmPage> {
     );
   }
 
-  // Widget untuk Search Bar
   Widget _buildSearchBar() {
     return Padding(
-      // Beri background putih agar kontras dengan body
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(AppTheme.spaceLG),
       child: Row(
         children: [
           Expanded(
@@ -73,35 +69,29 @@ class _UmkmPageState extends State<UmkmPage> {
                 decoration: InputDecoration(
                   hintText: 'Cari UMKM/Produk/Jasa',
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  fillColor: Colors.white,
+                  fillColor: AppTheme.backgroundWhite,
                   filled: true,
-                  // Border standar
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: const BorderSide(color: AppTheme.borderColor),
                   ),
-                  // Border saat tidak di-klik
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: const BorderSide(color: AppTheme.borderColor),
                   ),
-                  // Border saat di-klik
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: const BorderSide(color: AppTheme.borderColor),
                   ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          // Tombol Filter
+          const SizedBox(width: AppTheme.spaceSM),
           IconButton(
-            icon: Icon(Icons.filter_list, color: Colors.grey[800], size: 30),
-            onPressed: () {
-              // TODO: Tampilkan modal filter
-            },
+            icon: const Icon(Icons.filter_list, color: AppTheme.textSecondary, size: 30),
+            onPressed: () {},
           ),
         ],
       ),
@@ -114,11 +104,11 @@ class _UmkmPageState extends State<UmkmPage> {
       height: 50,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLG),
         itemCount: _filters.length,
         itemBuilder: (context, index) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceXS),
             child: ChoiceChip(
               label: Text(_filters[index]),
               selected: _selectedFilter == _filters[index],
@@ -127,11 +117,11 @@ class _UmkmPageState extends State<UmkmPage> {
                   _selectedFilter = _filters[index];
                 });
               },
-              backgroundColor: Colors.white,
-              selectedColor: Colors.blue.shade100,
+              backgroundColor: AppTheme.backgroundWhite,
+              selectedColor: AppTheme.primaryBlueLight.withOpacity(0.2),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+                side: const BorderSide(color: AppTheme.borderColor),
               ),
             ),
           );
